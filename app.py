@@ -1,7 +1,7 @@
 import streamlit as st
 
 # --- KONFIGURACJA STRONY ---
-st.set_page_config(page_title="Projektant Rozdzielnicy v1.9 - System Fazowy", layout="wide")
+st.set_page_config(page_title="Projektant Rozdzielnicy v1.9.1", layout="wide")
 
 if 'szyna' not in st.session_state:
     st.session_state['szyna'] = []
@@ -15,13 +15,7 @@ PRODUCENCI = {
     "Standard": {"primary": "#333", "bg": "#ffffff"}
 }
 
-FAZY_KOLORY = {
-    "L1": "🔴",
-    "L2": "⚫",
-    "L3": "⚪",
-    "L123": "🌈",
-    "Brak": "➖"
-}
+FAZY_KOLORY = {"L1": "🔴", "L2": "⚫", "L3": "⚪", "L123": "🌈"}
 
 # --- CSS ---
 st.markdown("""
@@ -38,7 +32,7 @@ st.markdown("""
         flex-direction: column; min-height: 420px; flex-shrink: 0;
         background-color: white; overflow: hidden;
     }
-    .aparat-faza { font-size: 16px; margin: 2px 0; }
+    .aparat-faza { font-size: 14px; font-weight: bold; margin: 4px 0; }
     .aparat-id { font-size: 11px; font-weight: bold; background: #222; color: #fff; padding: 4px; }
     .aparat-body { padding: 10px 4px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
     .aparat-header { font-size: 10px; font-weight: bold; color: #444; text-transform: uppercase; height: 40px; }
@@ -46,8 +40,7 @@ st.markdown("""
     .aparat-label { border: 1px solid #bbb; background: #fff; font-size: 13px; min-height: 70px; 
                    display: flex; align-items: center; justify-content: center; margin: 5px; 
                    padding: 6px; font-family: monospace; font-weight: bold; color: #000; }
-    .aparat-footer { background: #2c3e50; color: #f1c40f; padding: 10px 2px; }
-    .mod-text { font-size: 12px; font-weight: 800; color: white; display: block; margin-top: 4px; }
+    .aparat-footer { background: #2c3e50; color: #f1c40f; padding: 10px 2px; margin-top: auto; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -74,26 +67,68 @@ BIBLIOTEKA = [
 ]
 
 # --- PANEL BOCZNY ---
-st.sidebar.title("⚡ Parametry Projektu")
+st.sidebar.title("⚡ Panel Konfiguracji")
 producent_key = st.sidebar.selectbox("Producent:", list(PRODUCENCI.keys()))
 brand = PRODUCENCI[producent_key]
 
 st.sidebar.divider()
-st.sidebar.subheader("➕ Dodaj Aparat")
-
 opcje_szuk = [f"{u.charakterystyka}{u.prad if u.prad.isdigit() else ''} | {u.nazwa}" for u in BIBLIOTEKA]
-wybor_idx = st.sidebar.selectbox("Szukaj:", range(len(BIBLIOTEKA)), format_func=lambda x: opcje_szuk[x], index=None)
+wybor_idx = st.sidebar.selectbox("Szukaj aparatu:", range(len(BIBLIOTEKA)), format_func=lambda x: opcje_szuk[x], index=None)
 
-# Dynamiczny wybór fazy tylko dla urządzeń 1-fazowych i 2-fazowych
-wybrana_faza = "L123"
+faza_finalna = "L123"
 if wybor_idx is not None:
-    moduly_wybranego = BIBLIOTEKA[wybor_idx].moduly
-    if moduly_wybranego < 3:
-        wybrana_faza = st.sidebar.radio("Wybierz fazę zasilającą:", ["L1", "L2", "L3"])
+    if BIBLIOTEKA[wybor_idx].moduly < 3:
+        faza_finalna = st.sidebar.radio("Wybierz fazę:", ["L1", "L2", "L3"])
 
-etykieta = st.sidebar.text_input("Etykieta (opis):", "")
+etykieta = st.sidebar.text_input("Etykieta obwodu:", "")
 
-if st.sidebar.button("Montuj na szynie ➡️"):
+if st.sidebar.button("Dodaj do projektu ➡️"):
     if wybor_idx is not None:
-        w = BIBLIOTEKA[wybor_idx]
-        st.session_state['szyna'].append(Urzadzenie(w.nazwa, w.charakterystyka, w.prad, w.moduly, wybrana_faza
+        base = BIBLIOTEKA[wybor_idx]
+        nowe = Urzadzenie(base.nazwa, base.charakterystyka, base.prad, base.moduly, faza_finalna, etykieta)
+        st.session_state['szyna'].append(nowe)
+        st.rerun()
+
+if st.sidebar.button("Cofnij ostatni ⬅️"):
+    if st.session_state['szyna']: st.session_state['szyna'].pop(); st.rerun()
+
+# --- WIZUALIZACJA ---
+st.title("⚡ Wirtualna Rozdzielnica - System Fazowy")
+
+
+
+html_szyna = ""
+bilans = {"L1": 0, "L2": 0, "L3": 0}
+
+for i, u in enumerate(st.session_state.get('szyna', [])):
+    szer = u.moduly * 65
+    style = f'width:{szer}px; border-top: 15px solid {brand["primary"]};'
+    ico = FAZY_KOLORY.get(u.faza, "➖")
+    
+    if u.faza == "L123":
+        for k in bilans: bilans[k] += 1
+    elif u.faza in bilans:
+        bilans[u.faza] += 1
+
+    html_szyna += f'<div class="aparat" style="{style}">'
+    html_szyna += f'<div class="aparat-id">F{i+1}</div>'
+    html_szyna += f'<div class="aparat-faza">{ico} {u.faza}</div>'
+    html_szyna += f'<div class="aparat-body">'
+    html_szyna += f'<div class="aparat-header">{u.nazwa}</div>'
+    html_szyna += f'<div style="background:#f0f0f0;padding:5px;border-radius:5px;">'
+    html_szyna += f'<span style="font-size:14px;font-weight:bold;">{u.charakterystyka}</span>'
+    html_szyna += f'<span class="amp-text">{u.prad}{"A" if u.prad.isdigit() else ""}</span></div>'
+    html_szyna += f'<div class="aparat-label">{u.opis if u.opis else "---"}</div></div>'
+    html_szyna += f'<div class="aparat-footer"><div>{"■"*u.moduly}</div>'
+    html_szyna += f'<div style="font-size:11px;">{u.moduly} MOD</div></div></div>'
+
+st.markdown(f'<div class="szyna-din">{html_szyna}</div>', unsafe_allow_html=True)
+
+# --- BILANS ---
+st.divider()
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Faza L1 (🔴)", f"{bilans['L1']} szt.")
+c2.metric("Faza L2 (⚫)", f"{bilans['L2']} szt.")
+c3.metric("Faza L3 (⚪)", f"{bilans['L3']} szt.")
+total_m = sum(u.moduly for u in st.session_state.get('szyna', []))
+c4.metric("Suma Modułów", f"{total_m} DIN")
