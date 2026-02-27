@@ -5,11 +5,11 @@ st.set_page_config(page_title="Projektant Rozdzielnicy v1.2", layout="wide")
 
 # --- DEFINICJA PRODUCENTÓW ---
 PRODUCENCI = {
-    "Eaton": {"primary": "#005EB8", "bg": "#f0f4f8", "text": "#000000"},
-    "Legrand": {"primary": "#E20613", "bg": "#f9f1f1", "text": "#000000"},
-    "Schneider": {"primary": "#3dcd58", "bg": "#f1f9f2", "text": "#000000"},
-    "Hager": {"primary": "#00305d", "bg": "#f0f2f5", "text": "#000000"},
-    "Standard": {"primary": "#34495e", "bg": "#ffffff", "text": "#000000"}
+    "Eaton": {"primary": "#005EB8", "bg": "#f0f4f8"},
+    "Legrand": {"primary": "#E20613", "bg": "#f9f1f1"},
+    "Schneider": {"primary": "#3dcd58", "bg": "#f1f9f2"},
+    "Hager": {"primary": "#00305d", "bg": "#f0f2f5"},
+    "Standard": {"primary": "#34495e", "bg": "#ffffff"}
 }
 
 # --- CUSTOM CSS ---
@@ -26,7 +26,7 @@ st.markdown("""
         border-top: 20px solid #a0a0a0;
         border-bottom: 20px solid #a0a0a0;
         min-height: 380px;
-        gap: 3px;
+        gap: 4px;
     }
     .aparat {
         border: 2px solid #444;
@@ -55,9 +55,7 @@ st.markdown("""
         border-bottom: 1px solid #ddd;
         margin-bottom: 10px;
         text-transform: uppercase;
-    }
-    .aparat-parametry {
-        margin: 10px 0;
+        overflow: hidden;
     }
     .aparat-char {
         font-size: 14px;
@@ -72,11 +70,12 @@ st.markdown("""
         background: #fff;
         font-size: 10px;
         padding: 5px 2px;
-        min-height: 40px;
+        min-height: 60px;
         display: flex;
         align-items: center;
         justify-content: center;
         margin: 10px 0;
+        color: #333;
     }
     .aparat-footer {
         margin-top: auto;
@@ -97,7 +96,6 @@ class Urzadzenie:
         self.moduly = moduly
         self.opis = opis
 
-# --- INICJALIZACJA SESJI ---
 if 'szyna' not in st.session_state:
     st.session_state.szyna = []
 
@@ -121,53 +119,40 @@ biblioteka = [
 
 opcje_tekstowe = [f"{u.nazwa} {u.charakterystyka}{u.prad}" for u in biblioteka]
 wybor_nazwa = st.sidebar.selectbox("Typ urządzenia:", opcje_tekstowe)
-opis_obwodu = st.sidebar.text_input("Etykieta (np. Oświetlenie Góra):", "")
+opis_obwodu = st.sidebar.text_input("Etykieta (np. Gniazda Salon):", "")
 
 if st.sidebar.button("Dodaj do projektu ➡️"):
     idx = opcje_tekstowe.index(wybor_nazwa)
     szablon = biblioteka[idx]
-    nowe_urz = Urzadzenie(szablon.nazwa, szablon.charakterystyka, szablon.prad, szablon.moduly, opis_obwodu)
-    st.session_state.szyna.append(nowe_urz)
+    st.session_state.szyna.append(Urzadzenie(szablon.nazwa, szablon.charakterystyka, szablon.prad, szablon.moduly, opis_obwodu))
     st.rerun()
 
-st.sidebar.markdown("---")
-if st.sidebar.button("Usuń ostatni"):
+if st.sidebar.button("Cofnij ostatni"):
     if st.session_state.szyna:
-        st.session_state.szyna.pop(); st.rerun()
+        st.session_state.szyna.pop()
+        st.rerun()
 
 if st.sidebar.button("Wyczyść wszystko 🗑️"):
-    st.session_state.szyna = []; st.rerun()
+    st.session_state.szyna = []
+    st.rerun()
 
 # --- WIZUALIZACJA GŁÓWNA ---
 st.title("⚡ Wirtualna Szyna Montażowa")
 
-
-
+# Budowanie HTML jako jeden ciąg znaków (BEZ NOWYCH LINII I WCIĘĆ)
 html_items = ""
 for i, u in enumerate(st.session_state.szyna):
-    szerokosc = u.moduly * 50 # Nieco szerzej dla czytelności
+    szerokosc = u.moduly * 50
+    style_aparat = f'width:{szerokosc}px;border-top:12px solid {brand["primary"]};background-color:{brand["bg"]};'
     
-    style_aparat = (
-        f'width: {szerokosc}px; '
-        f'border-top: 12px solid {brand["primary"]}; '
-        f'background-color: {brand["bg"]};'
-    )
-    
-    # Budowanie HTML pojedynczego modułu
-    html_items += f"""
-    <div class="aparat" style="{style_aparat}">
-        <div class="aparat-id">S{i+1}</div>
-        <div class="aparat-naglowek">{u.nazwa}</div>
-        <div class="aparat-parametry">
-            <span class="aparat-char" style="color: {brand["primary"]};">{u.charakterystyka}</span>
-            <div class="aparat-prad">{u.prad}</div>
-        </div>
-        <div class="aparat-opis-box">
-            {u.opis if u.opis else "---"}
-        </div>
-        <div class="aparat-footer">{u.moduly} MOD</div>
-    </div>
-    """
+    # Składanie w jedną linię, aby uniknąć błędów renderowania Streamlit
+    html_items += f'<div class="aparat" style="{style_aparat}">'
+    html_items += f'<div class="aparat-id">S{i+1}</div>'
+    html_items += f'<div class="aparat-naglowek">{u.nazwa}</div>'
+    html_items += f'<div style="margin:10px 0;"><span class="aparat-char" style="color:{brand["primary"]};">{u.charakterystyka}</span>'
+    html_items += f'<div class="aparat-prad">{u.prad}</div></div>'
+    html_items += f'<div class="aparat-opis-box">{u.opis if u.opis else "---"}</div>'
+    html_items += f'<div class="aparat-footer">{u.moduly} MOD</div></div>'
 
 st.markdown(f'<div class="szyna-din">{html_items}</div>', unsafe_allow_html=True)
 
@@ -177,4 +162,4 @@ suma_mod = sum(u.moduly for u in st.session_state.szyna)
 c1, c2, c3 = st.columns(3)
 c1.metric("Suma modułów", f"{suma_mod}")
 c2.metric("Szerokość szyny", f"{suma_mod * 17.5} mm")
-c3.info(f"Producent: {producent_key} | Standard szyny: DIN 35mm")
+c3.info(f"Producent: {producent_key}")
