@@ -2,11 +2,6 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# =================================================================
-# --- FUNDAMENT (NIE NARUSZALNY) ---
-# =================================================================
-
-# --- 1. KONFIGURACJA ---
 st.set_page_config(page_title="Projektant Rozdzielnicy - Marcin Szymański", layout="wide")
 
 if 'szyna' not in st.session_state:
@@ -14,18 +9,14 @@ if 'szyna' not in st.session_state:
 if 'next_faza_idx' not in st.session_state:
     st.session_state['next_faza_idx'] = 0
 
-# --- 2. STYLE CSS (OPTYMALIZACJA POD A4, NAGŁÓWEK I WYDRUK) ---
 st.markdown("""
     <style>
-    /* STYLE EKRANOWE */
     .obudowa { background-color: #333; padding: 25px; border-radius: 12px; }
     .szyna-din {
         display: flex; flex-direction: row; background-color: #b0b0b0;
         padding: 25px 5px; border-top: 10px solid #777; border-bottom: 10px solid #777;
         gap: 4px; margin-bottom: 15px; overflow-x: auto;
     }
-    
-    /* NAGŁÓWEK DOKUMENTACJI - OCZYSZCZONY */
     .header-box {
         border: 3px solid #1f1f1f;
         padding: 0;
@@ -42,32 +33,15 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 2px;
     }
-
-    /* STYLE DRUKU (Ctrl+P) */
     @media print {
         section[data-testid="stSidebar"], .stButton, header, footer, [data-testid="stDecoration"], .no-print {
             display: none !important;
         }
-        .main .block-container {
-            padding-top: 5mm !important;
-        }
-        .obudowa {
-            background-color: white !important;
-            border: 2px solid black !important;
-        }
-        .szyna-din {
-            background-color: #f9f9f9 !important;
-            border: 1px solid #000 !important;
-            page-break-inside: avoid;
-        }
-        .header-box {
-            border: 2px solid black !important;
-        }
-        .header-top {
-            background-color: #f2f2f2 !important;
-            color: black !important;
-            border-bottom: 2px solid black;
-        }
+        .main .block-container { padding-top: 5mm !important; }
+        .obudowa { background-color: white !important; border: 2px solid black !important; }
+        .szyna-din { background-color: #f9f9f9 !important; border: 1px solid #000 !important; page-break-inside: avoid; }
+        .header-box { border: 2px solid black !important; }
+        .header-top { background-color: #f2f2f2 !important; color: black !important; border-bottom: 2px solid black; }
         .copyright-footer {
             position: fixed;
             bottom: 5mm;
@@ -76,31 +50,17 @@ st.markdown("""
             color: #333;
             display: block !important;
         }
-        h2, .section-break {
-            page-break-before: always !important;
-        }
+        h2, .section-break { page-break-before: always !important; }
     }
-    
     .copyright-screen {
-        text-align: right;
-        font-size: 12px;
-        color: #888;
-        margin-top: 30px;
-        border-top: 1px solid #eee;
-        padding-top: 10px;
+        text-align: right; font-size: 12px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;
     }
-
     .schemat-box {
-        font-family: monospace;
-        border: 2px solid #000;
-        padding: 20px;
-        background-color: #fdfdfd;
-        overflow-x: auto;
+        font-family: monospace; border: 2px solid #000; padding: 20px; background-color: #fdfdfd; overflow-x: auto;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. PARAMETRY I BIBLIOTEKA ---
 RZAD_MAX_MOD = 18 
 PRODUCENCI = {"Eaton": "#005EB8", "Legrand": "#E20613", "Schneider": "#3dcd58", "Hager": "#00305d"}
 
@@ -138,20 +98,16 @@ class Urzadzenie:
         try: self.val_a = float(''.join(filter(lambda x: x.isdigit() or x == '.', str(prad))))
         except: self.val_a = 0.0
 
-# --- 4. SIDEBAR ---
 st.sidebar.title("🛠️ Kreator Projektu")
 prod_name = st.sidebar.selectbox("Producent osprzętu:", list(PRODUCENCI.keys()))
 brand_color = PRODUCENCI[prod_name]
-
 st.sidebar.divider()
 st.sidebar.subheader("📝 Dane Inwestycji")
 klient = st.sidebar.text_input("Inwestor / Klient:", "Jan Kowalski")
 miejsce = st.sidebar.text_input("Miejsce montażu:", "Dom Jednorodzinny - Rozdzielnica R1")
-
 st.sidebar.divider()
 wsp_j = st.sidebar.slider("Współczynnik jednoczesności:", 0.1, 1.0, 0.6)
 limit_a = st.sidebar.number_input("Limit przedlicznikowy [A]:", value=25)
-
 st.sidebar.divider()
 kat = st.sidebar.selectbox("Kategoria:", list(DB_APARATY.keys()))
 ap_typ = st.sidebar.selectbox("Urządzenie:", DB_APARATY[kat], format_func=lambda x: f"{x['n']} ({x['c']})")
@@ -170,14 +126,12 @@ if st.sidebar.button("Usuń ostatni ⬅️"):
 if st.sidebar.button("Resetuj projekt 🗑️"):
     st.session_state['szyna'] = []; st.session_state['next_faza_idx'] = 0; st.rerun()
 
-# --- 5. NAGŁÓWEK DOKUMENTACJI ---
 st.markdown(f"""
     <div class="header-box">
         <div class="header-top">Dokumentacja Techniczna Rozdzielnicy</div>
     </div>
 """, unsafe_allow_html=True)
 
-# --- 6. ANALIZA OBCIĄŻENIA ---
 obc = {"L1": 0.0, "L2": 0.0, "L3": 0.0}
 for u in st.session_state['szyna']:
     if u.charakterystyka not in ["FR", "SPD"]:
@@ -193,7 +147,6 @@ for i, f in enumerate(["L1", "L2", "L3"]):
         b_c = "green" if p_proc < 0.8 else "orange" if p_proc < 1.0 else "red"
         st.markdown(f'<div class="no-print" style="background:#eee;height:8px;width:100%;border-radius:4px;"><div style="background:{b_c};height:8px;width:{p_proc*100}%;border-radius:4px;"></div></div>', unsafe_allow_html=True)
 
-# --- 7. WIZUALIZACJA SZYN ---
 rzedy = [[]]; akt_m = 0
 for u in st.session_state['szyna']:
     if akt_m + u.moduly > RZAD_MAX_MOD: rzedy.append([u]); akt_m = u.moduly
@@ -220,7 +173,6 @@ for r_i, rzad in enumerate(rzedy):
         st.markdown(html_szyny, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 8. TABELA I ZESTAWIENIE ---
 if st.session_state['szyna']:
     st.divider()
     st.header("1. Specyfikacja techniczna obwodów")
@@ -236,46 +188,32 @@ if st.session_state['szyna']:
     df_bom.columns = ['Element instalacji', 'Ilość [szt]']
     st.table(df_bom)
 
-# =================================================================
-# --- KONIEC FUNDAMENTU ---
-# =================================================================
-
-
-# --- 9. MODUŁ SCHEMATU JEDNOKRESKOWEGO ---
-if st.session_state['szyna']:
     st.markdown('<div class="section-break"></div>', unsafe_allow_html=True)
     st.header("3. Schemat jednokreskowy ideowy")
-    
-    sch = "ZASILANIE: Sieć TN-S 3x230/400V\n┃\n"
+    sch = "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\\n┃\\n"
     glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
     obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
-    
     for u in glowny:
-        prefiks = "Q" if u.charakterystyka == "FR" else "F"
-        sch += f"┣━[ {prefiks}: {u.charakterystyka} {u.prad} ] ——— Zasilanie\n┃\n"
-    
-    sch += "┣━━━━┳━━━━┳━━━━ MAGISTRALA L1, L2, L3\n"
+        pref = "Q" if u.charakterystyka == "FR" else "F"
+        sch += f"┣━[ {pref}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny\\n┃\\n"
+    sch += "┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3\\n"
     for u in obwody:
-        symbol = "—[—" if u.moduly == 1 else "—[≡—"
-        sch += f"┃    ┣━({u.faza})━{symbol} {u.charakterystyka}{u.prad} ]——— {u.przekroj} ———> {u.opis}\n"
-    
-    st.markdown(f'<div class="schemat-box"><pre>{sch}</pre></div>', unsafe_allow_html=True)
+        sym = "—[—" if u.moduly == 1 else "—[≡—"
+        sch += f"┃    ┣━({u.faza})━{sym} {u.charakterystyka}{u.prad} ]——— {u.przekroj} ———> {u.opis}\\n"
+    sch += "┃    ▼\\n⚡ REZERWA"
+    st.markdown(f'<div class="schemat-box"><pre style="font-size:14px; line-height:1.2;">{sch}</pre></div>', unsafe_allow_html=True)
 
-
-# --- 10. MODUŁ WYDRUKU WSZYSTKICH STRON ---
-if st.session_state['szyna']:
     st.sidebar.divider()
-    if st.sidebar.button("🖨️ DRUKUJ DOKUMENTACJĘ", use_container_width=True):
+    if st.sidebar.button("🖨️ DRUKUJ CAŁOŚĆ", use_container_width=True):
         st.markdown('<script>window.print();</script>', unsafe_allow_html=True)
     
-    # Stopka autorska Marcin Szymański
     st.markdown(f"""
         <div class="copyright-screen no-print">
             © {datetime.now().year} Opracowanie: <b>Marcin Szymański</b> | Wszystkie prawa zastrzeżone
         </div>
         <div class="copyright-footer" style="display:none;">
-            Projekt: Marcin Szymański | Dokumentacja wygenerowana: {datetime.now().strftime('%d.%m.%Y')}
+            Projekt: Marcin Szymański | Data: {datetime.now().strftime('%d.%m.%Y')}
         </div>
     """, unsafe_allow_html=True)
 else:
-    st.info("Dodaj urządzenia, aby wygenerować dokumentację.")
+    st.info("Dodaj urządzenia, aby wygenerować pełną dokumentację.")
