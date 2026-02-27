@@ -1,161 +1,133 @@
 import streamlit as st
 import pandas as pd
 
-# --- 1. KONFIGURACJA ---
-st.set_page_config(page_title="Dokumentacja Rozdzielnicy v3.7", layout="wide")
+# --- KONFIGURACJA ---
+st.set_page_config(page_title="Asystent Elektryka v3.5 - Przekroje Przewodów", layout="wide")
 
 if 'szyna' not in st.session_state:
     st.session_state['szyna'] = []
-if 'nazwy_rzedow' not in st.session_state:
-    st.session_state['nazwy_rzedow'] = {}
+if 'next_faza_idx' not in st.session_state:
+    st.session_state['next_faza_idx'] = 0
 
-# --- 2. PARAMETRY ---
+# --- PARAMETRY I BIBLIOTEKA ---
 RZAD_MAX_MOD = 18 
 PRODUCENCI = {"Eaton": "#005EB8", "Legrand": "#E20613", "Schneider": "#3dcd58", "Hager": "#00305d"}
 
-# --- 3. CSS DLA WYDRUKU (KLUCZOWY ELEMENT) ---
-st.markdown("""
-    <style>
-    /* STYLE DLA EKRANU */
-    .obudowa { background-color: #333; padding: 25px; border-radius: 12px; border: 6px solid #222; }
-    .szyna-din { 
-        display: flex; flex-direction: row; background-color: #b0b0b0; 
-        padding: 35px 5px; border-top: 15px solid #777; border-bottom: 15px solid #777; 
-        gap: 4px; margin-bottom: 30px; 
-    }
-    
-    /* STYLE DLA DRUKARKI (Ctrl+P) */
-    @media print {
-        /* Ukrywamy sidebar, przyciski, stopki i dekoracje Streamlit */
-        section[data-testid="stSidebar"], 
-        .stButton, 
-        header, 
-        footer, 
-        .no-print,
-        [data-testid="stDecoration"] {
-            display: none !important;
-        }
-        
-        /* Resetujemy marginesy i tła */
-        .main .block-container {
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-        
-        body, .main {
-            background-color: white !important;
-            color: black !important;
-        }
-        
-        .obudowa {
-            background-color: white !important;
-            border: 2px solid black !important;
-            padding: 10px !important;
-            box-shadow: none !important;
-        }
-        
-        .szyna-din {
-            background-color: #f9f9f9 !important;
-            border: 1px solid #000 !important;
-            padding: 20px 0 !important;
-            page-break-inside: avoid;
-        }
-        
-        .aparat {
-            border: 1px solid black !important;
-            box-shadow: none !important;
-            background: white !important;
-            print-color-adjust: exact;
-        }
-        
-        h1, h2, h3 {
-            color: black !important;
-            margin-top: 10px !important;
-        }
+DB_APARATY = {
+    "Zabezpieczenia Nadprądowe (MCB)": [
+        {"n": "Wyłącznik 1P", "c": "B", "p": ["6", "10", "13", "16", "20", "25", "32", "40"], "m": 1},
+        {"n": "Wyłącznik 3P", "c": "B", "p": ["16", "20", "25", "32", "40"], "m": 3},
+    ],
+    "Różnicowoprądowe (RCD)": [
+        {"n": "Różnicówka 2P 30mA", "c": "Typ A", "p": ["25", "40"], "m": 2},
+        {"n": "Różnicówka 4P 30mA", "c": "Typ A", "p": ["25", "40", "63"], "m": 4},
+    ],
+    "Pozostałe": [
+        {"n": "Rozłącznik Główny 3P", "c": "FR", "p": ["63", "100"], "m": 3},
+        {"n": "Ochronnik T1+T2", "c": "SPD", "p": ["B+C"], "m": 4},
+        {"n": "Lampka Kontrolna", "c": "L-3", "p": ["230V"], "m": 1},
+    ]
+}
 
-        /* Wymuszamy, aby tabele nie dzieliły się w połowie wiersza */
-        table { page-break-inside: auto; }
-        tr { page-break-inside: avoid; page-break-after: auto; }
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- 4. KLASA I FUNKCJE ---
-def wylicz_przekroj(prad):
+# Funkcja doboru przekroju
+def wylicz_przekroj(prad_str):
     try:
-        p = float(''.join(filter(lambda x: x.isdigit() or x == '.', str(prad))))
+        p = float(''.join(filter(lambda x: x.isdigit() or x == '.', str(prad_str))))
         if p <= 13: return "1.5 mm²"
         elif p <= 20: return "2.5 mm²"
-        else: return "4.0 mm²+"
-    except: return "-"
+        elif p <= 25: return "4.0 mm²"
+        elif p <= 40: return "6.0 mm²"
+        else: return "10.0 mm²+"
+    except: return "wg dok."
 
 class Urzadzenie:
     def __init__(self, nazwa, charakterystyka, prad, moduly, faza, opis=""):
         self.nazwa, self.charakterystyka, self.prad, self.moduly = nazwa, charakterystyka, prad, moduly
         self.faza, self.opis = faza, opis
         self.przekroj = wylicz_przekroj(prad)
+        try: self.val_a = float(''.join(filter(lambda x: x.isdigit() or x == '.', str(prad))))
+        except: self.val_a = 0.0
 
-# --- 5. PANEL BOCZNY (Widoczny tylko na ekranie) ---
-st.sidebar.title("🛠️ Panel Inżynierski")
-prod = st.sidebar.selectbox("Marka:", list(PRODUCENCI.keys()))
-b_color = PRODUCENCI[prod]
+# --- SIDEBAR ---
+st.sidebar.title("🛠️ Projektant v3.5")
+prod_name = st.sidebar.selectbox("Producent:", list(PRODUCENCI.keys()))
+brand_color = PRODUCENCI[prod_name]
 
-# Prosta biblioteka do testów
-ap_typ = st.sidebar.selectbox("Aparat:", ["Wyłącznik B16", "Wyłącznik B10", "RCD 4P 40A", "SPD T1+T2"])
-etyk = st.sidebar.text_input("Opis obwodu:", "Gniazda")
+wsp_j = st.sidebar.slider("Współczynnik jednoczesności:", 0.1, 1.0, 0.6)
+limit_a = st.sidebar.number_input("Limit przedlicznikowy [A]:", value=25)
 
-if st.sidebar.button("Dodaj do projektu"):
-    # Logika uproszczona dla demonstracji wydruku
-    m = 4 if "SPD" in ap_typ or "RCD" in ap_typ else 1
-    char = "B" if "B" in ap_typ else "SPD"
-    prad = "16" if "16" in ap_typ else "10" if "10" in ap_typ else "40"
-    st.session_state['szyna'].append(Urzadzenie(ap_typ, char, prad, m, "L1", etyk))
+st.sidebar.divider()
+kat = st.sidebar.selectbox("Kategoria:", list(DB_APARATY.keys()))
+ap_typ = st.sidebar.selectbox("Urządzenie:", DB_APARATY[kat], format_func=lambda x: f"{x['n']} ({x['c']})")
+ap_prad = st.sidebar.selectbox("Prąd/Parametr:", ap_typ['p'])
+f_auto = "L123" if ap_typ['m'] >= 3 else st.sidebar.selectbox("Faza:", ["L1", "L2", "L3"], index=st.session_state['next_faza_idx'])
+etyk = st.sidebar.text_input("Opis obwodu:", "Gniazda Salon")
+
+if st.sidebar.button("Dodaj do szafy ➡️", use_container_width=True):
+    st.session_state['szyna'].append(Urzadzenie(ap_typ['n'], ap_typ['c'], ap_prad, ap_typ['m'], f_auto, etyk))
+    if ap_typ['m'] < 3: st.session_state['next_faza_idx'] = (st.session_state['next_faza_idx'] + 1) % 3
     st.rerun()
 
-if st.sidebar.button("Wyczyść projekt"):
-    st.session_state['szyna'] = []; st.rerun()
+if st.sidebar.button("Usuń ostatni ⬅️"):
+    if st.session_state['szyna']: st.session_state['szyna'].pop(); st.rerun()
 
-# --- 6. GENEROWANIE DOKUMENTACJI (Widok główny) ---
-st.title("PROJEKT TECHNICZNY ROZDZIELNICY")
-st.caption("Dokument wygenerowany automatycznie. Zawiera schemat montażowy, specyfikację i listę materiałową.")
+# --- ANALIZA OBCIĄŻALNOŚCI ---
+obc = {"L1": 0.0, "L2": 0.0, "L3": 0.0}
+for u in st.session_state['szyna']:
+    if u.charakterystyka not in ["FR", "SPD"]:
+        if u.faza == "L123":
+            for f in ["L1", "L2", "L3"]: obc[f] += u.val_a * wsp_j
+        else: obc[u.faza] += u.val_a * wsp_j
 
-# Wizualizacja rzędów
+# --- WIZUALIZACJA ---
+st.title(f"⚡ Rozdzielnica {RZAD_MAX_MOD} MOD")
+
+# Paski obciążenia
+cols = st.columns(3)
+for i, f in enumerate(["L1", "L2", "L3"]):
+    p_proc = min(obc[f] / limit_a, 1.1)
+    with cols[i]:
+        st.metric(f"Faza {f}", f"{obc[f]:.1f} A")
+        b_c = "green" if p_proc < 0.8 else "orange" if p_proc < 1.0 else "red"
+        st.markdown(f'<div style="background:#eee;height:8px;width:100%;border-radius:4px;"><div style="background:{b_c};height:8px;width:{p_proc*100}%;border-radius:4px;"></div></div>', unsafe_allow_html=True)
+
+
+
+# Rzędy
 rzedy = [[]]; akt_m = 0
 for u in st.session_state['szyna']:
     if akt_m + u.moduly > RZAD_MAX_MOD: rzedy.append([u]); akt_m = u.moduly
     else: rzedy[-1].append(u); akt_m += u.moduly
 
-st.markdown('<div class="obudowa">', unsafe_allow_html=True)
+st.markdown('<div style="background:#333; padding:20px; border-radius:12px;">', unsafe_allow_html=True)
 for r_i, rzad in enumerate(rzedy):
     if rzad:
-        st.write(f"**SZYNIA DIN NR {r_i+1}**")
-        html = '<div class="szyna-din">'
+        st.markdown(f'<div style="color:#f1c40f; font-weight:bold;">SZYNIA #{r_i+1}</div>', unsafe_allow_html=True)
+        html = '<div style="display:flex; overflow-x:auto; background:#b0b0b0; padding:25px 5px; border-top:10px solid #777; border-bottom:10px solid #777; gap:4px; margin-bottom:15px;">'
         for u in rzad:
+            f_c = {"L1":"red","L2":"black","L3":"#555","L123":"blue"}.get(u.faza)
             html += f"""
-            <div class="aparat" style="width:{u.moduly*48}px; border-top: 10px solid {b_color}; border: 1px solid #000; background: #fff; flex-shrink:0; text-align:center; min-height:280px; display:flex; flex-direction:column;">
-                <div style="font-size:10px; font-weight:bold; padding:5px; border-bottom:1px solid #eee;">{u.faza}</div>
-                <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
-                    <div style="font-size:24px; font-weight:900;">{u.charakterystyka}{u.prad}</div>
-                    <div style="font-size:9px;">{u.przekroj}</div>
-                </div>
-                <div style="font-size:10px; padding:5px; background:#f9f9f9; min-height:60px; font-weight:bold;">{u.opis}</div>
-                <div style="font-size:9px; padding:3px; background:#ddd;">{u.moduly} MOD</div>
+            <div style="width:{u.moduly*48}px; border:1px solid #000; background:#fff; flex-shrink:0; text-align:center; min-height:300px; border-top:8px solid {brand_color};">
+                <div style="font-size:9px; font-weight:bold; color:{f_c};">{u.faza}</div>
+                <div style="font-size:20px; font-weight:900; color:#d35400;">{u.charakterystyka}{u.prad}</div>
+                <div style="font-size:9px; font-weight:bold; color:#555;">{u.przekroj}</div>
+                <div style="border:1px solid #ddd; margin:3px; height:45px; font-size:9px; font-weight:bold; display:flex; align-items:center; justify-content:center;">{u.opis}</div>
+                <div style="background:#1a252f; color:#f1c40f; font-size:9px; margin-top:auto; padding:3px;">{u.moduly}M</div>
             </div>"""
         html += '</div>'
         st.markdown(html, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Sekcje tekstowe
-st.header("1. Specyfikacja techniczna obwodów")
+# --- TABELA DANYCH TECHNICZNYCH ---
+st.divider()
 if st.session_state['szyna']:
-    df_tech = pd.DataFrame([{
-        "Poz.": i+1, "Aparat": f"{u.charakterystyka}{u.prad}", 
-        "Opis obwodu": u.opis, "Przewód Cu": u.przekroj, "Faza": u.faza
+    st.subheader("📋 Dane techniczne i przekroje przewodów")
+    df = pd.DataFrame([{
+        "Nr": f"F{i+1}",
+        "Faza": u.faza,
+        "Aparat": f"{u.nazwa} {u.charakterystyka}{u.prad}",
+        "Przekrój Cu": u.przekroj,
+        "Obciążenie [A]": f"{u.val_a * wsp_j:.1f} A",
+        "Przeznaczenie": u.opis
     } for i, u in enumerate(st.session_state['szyna'])])
-    st.table(df_tech)
-
-st.header("2. Zbiorcze zestawienie materiałowe")
-if st.session_state['szyna']:
-    bom = pd.Series([f"{u.nazwa} {u.charakterystyka}{u.prad}" for u in st.session_state['szyna']]).value_counts().reset_index()
-    bom.columns = ['Nazwa elementu', 'Ilość [szt.]']
-    st.table(bom)
+    st.table(df)
