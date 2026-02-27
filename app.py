@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
+# =================================================================
+# --- FUNDAMENT (NIE NARUSZALNY) ---
+# =================================================================
+
 # --- 1. KONFIGURACJA ---
 st.set_page_config(page_title="Projektant Rozdzielnicy - Marcin Szymański", layout="wide")
 
@@ -21,7 +25,7 @@ st.markdown("""
         gap: 4px; margin-bottom: 15px; overflow-x: auto;
     }
     
-    /* NAGŁÓWEK DOKUMENTACJI - OCZYSZCZONY ZGODNIE Z PROŚBĄ */
+    /* NAGŁÓWEK DOKUMENTACJI - OCZYSZCZONY */
     .header-box {
         border: 3px solid #1f1f1f;
         padding: 0;
@@ -72,6 +76,9 @@ st.markdown("""
             color: #333;
             display: block !important;
         }
+        h2, .section-break {
+            page-break-before: always !important;
+        }
     }
     
     .copyright-screen {
@@ -81,6 +88,14 @@ st.markdown("""
         margin-top: 30px;
         border-top: 1px solid #eee;
         padding-top: 10px;
+    }
+
+    .schemat-box {
+        font-family: monospace;
+        border: 2px solid #000;
+        padding: 20px;
+        background-color: #fdfdfd;
+        overflow-x: auto;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -170,7 +185,6 @@ for u in st.session_state['szyna']:
             for f in ["L1", "L2", "L3"]: obc[f] += u.val_a * wsp_j
         else: obc[u.faza] += u.val_a * wsp_j
 
-# Wizualizacja obciążenia (Tylko na ekranie)
 cols = st.columns(3)
 for i, f in enumerate(["L1", "L2", "L3"]):
     p_proc = min(obc[f] / limit_a, 1.1)
@@ -222,52 +236,46 @@ if st.session_state['szyna']:
     df_bom.columns = ['Element instalacji', 'Ilość [szt]']
     st.table(df_bom)
 
-    # STOPKA AUTORSKA
-    st.markdown(f"""
-        <div class="copyright-screen no-print">
-            © {datetime.now().year} Opracowanie: <b>Marcin Szymański</b> | Wszystkie prawa zastrzeżone
-        </div>
-        <div class="copyright-footer no-print" style="display:none;">
-            Autor projektu: Marcin Szymański
-        </div>
-    """, unsafe_allow_html=True)
-else:
-    st.info("Dodaj urządzenia, aby wygenerować dokumentację.")
-    # --- 9. MODUŁ SCHEMATU JEDNOKRESKOWEGO (DODATEK) ---
+# =================================================================
+# --- KONIEC FUNDAMENTU ---
+# =================================================================
+
+
+# --- 9. MODUŁ SCHEMATU JEDNOKRESKOWEGO ---
 if st.session_state['szyna']:
-    st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-break"></div>', unsafe_allow_html=True)
     st.header("3. Schemat jednokreskowy ideowy")
     
-    # Inicjalizacja schematu
-    sch = "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\n"
-    sch += "┃\n"
-    
-    # Logika segregacji dla czytelności schematu
+    sch = "ZASILANIE: Sieć TN-S 3x230/400V\n┃\n"
     glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
     obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
     
-    # Rysowanie pnia zasilającego
     for u in glowny:
         prefiks = "Q" if u.charakterystyka == "FR" else "F"
-        sch += f"┣━[ {prefiks}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny\n┃\n"
+        sch += f"┣━[ {prefiks}: {u.charakterystyka} {u.prad} ] ——— Zasilanie\n┃\n"
     
     sch += "┣━━━━┳━━━━┳━━━━ MAGISTRALA L1, L2, L3\n"
-    
-    # Rysowanie gałęzi odbiorczych
     for u in obwody:
         symbol = "—[—" if u.moduly == 1 else "—[≡—"
         sch += f"┃    ┣━({u.faza})━{symbol} {u.charakterystyka}{u.prad} ]——— {u.przekroj} ———> {u.opis}\n"
     
-    sch += "┃    ▼\n"
-    sch += "⚡ REZERWA / ROZBUDOWA"
+    st.markdown(f'<div class="schemat-box"><pre>{sch}</pre></div>', unsafe_allow_html=True)
 
-    # Wyświetlanie w dedykowanym kontenerze CSS (zdefiniowanym w fundamencie)
-    st.markdown(f'<div class="schemat-box"><pre style="font-size:14px; line-height:1.2;">{sch}</pre></div>', unsafe_allow_html=True)
 
-    # Dodatkowa nota pod schematem (tylko na wydruku)
+# --- 10. MODUŁ WYDRUKU WSZYSTKICH STRON ---
+if st.session_state['szyna']:
+    st.sidebar.divider()
+    if st.sidebar.button("🖨️ DRUKUJ DOKUMENTACJĘ", use_container_width=True):
+        st.markdown('<script>window.print();</script>', unsafe_allow_html=True)
+    
+    # Stopka autorska Marcin Szymański
     st.markdown(f"""
-        <div class="print-only" style="font-size: 10px; font-style: italic; margin-top: 10px;">
-            Schemat jednokreskowy wygenerowany automatycznie na podstawie zestawienia aparatów. 
-            Przekroje przewodów dobrano zgodnie z obciążalnością prądową zabezpieczeń.
+        <div class="copyright-screen no-print">
+            © {datetime.now().year} Opracowanie: <b>Marcin Szymański</b> | Wszystkie prawa zastrzeżone
+        </div>
+        <div class="copyright-footer" style="display:none;">
+            Projekt: Marcin Szymański | Dokumentacja wygenerowana: {datetime.now().strftime('%d.%m.%Y')}
         </div>
     """, unsafe_allow_html=True)
+else:
+    st.info("Dodaj urządzenia, aby wygenerować dokumentację.")
