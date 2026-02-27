@@ -291,102 +291,70 @@ if st.session_state['szyna']:
         
         <h2>2. Specyfikacja techniczna obwodów</h2>
         <table>
-            <tr><th>Nr</th><th>Aparat</th><th>Faza</th><th>Przewód</th><th>Opis</th></tr>
+            <tr><th>Nr</th><th>Obwód (Nazwa)</th><th>Faza</th><th>Aparat</th><th>Przewód</th></tr>
     """
     
     for i, u in enumerate(st.session_state['szyna']):
-        html_content += f"<tr><td>{i+1}</td><td>{u.charakterystyka}{u.prad}</td><td>{u.faza}</td><td>{u.przekroj}</td><td>{u.opis}</td></tr>"
+        html_content += f"<tr><td>{i+1}</td><td>{u.opis}</td><td>{u.faza}</td><td>{u.charakterystyka}{u.prad}</td><td>{u.przekroj}</td></tr>"
         
     html_content += """
         </table>
         <div class="page-break"></div>
-        <h2>3. Profesjonalny Schemat Obwodu Elektrycznego (CAD)</h2>
+        <h2>3. Schemat Obwodów Rozdzielnicy</h2>
     """
     
-    svg_width = max(1000, 100 + sum((110 if u.moduly >= 3 else 70) for u in st.session_state['szyna']) + 200)
-    svg_height = 550
+    svg_width = max(1050, 150 + len(st.session_state['szyna']) * 110)
+    svg_height = 600
     
     svg = f'<div style="text-align: left; margin-top: 20px; border: 2px solid #000; background-color: #fafafa; padding-bottom: 20px; overflow-x: auto;">'
     svg += f'<svg width="{svg_width}" height="{svg_height}" xmlns="http://www.w3.org/2000/svg" style="font-family: sans-serif;">'
     
-    szyny = {"L1": 50, "L2": 70, "L3": 90, "N": 110, "PE": 130}
-    kolory = {"L1": "#c0392b", "L2": "#2c3e50", "L3": "#7f8c8d", "N": "#2980b9", "PE": "#27ae60"}
+    svg += '<rect x="50" y="50" width="80" height="60" fill="#ecf0f1" stroke="#2c3e50" stroke-width="2"/>'
+    svg += '<text x="90" y="80" font-size="12" font-weight="bold" text-anchor="middle">ZASILANIE</text>'
+    svg += '<text x="90" y="95" font-size="10" text-anchor="middle">3x230/400V</text>'
     
-    for nazwa, y in szyny.items():
-        svg += f'<line x1="40" y1="{y}" x2="{svg_width-40}" y2="{y}" stroke="{kolory[nazwa]}" stroke-width="2.5" />'
-        svg += f'<text x="10" y="{y+5}" font-size="12" font-weight="bold" fill="{kolory[nazwa]}">{nazwa}</text>'
+    svg += f'<line x1="130" y1="80" x2="{svg_width-50}" y2="80" stroke="#34495e" stroke-width="4"/>'
     
-    x = 100
-    for u in st.session_state['szyna']:
-        is_3p = u.moduly >= 3
-        w = 90 if is_3p else 60
+    x_offset = 180
+    for i, u in enumerate(st.session_state['szyna']):
+        svg += f'<circle cx="{x_offset}" cy="80" r="4" fill="#2c3e50"/>'
+        svg += f'<line x1="{x_offset}" y1="80" x2="{x_offset}" y2="150" stroke="#34495e" stroke-width="2"/>'
         
-        if is_3p:
-            for i, f in enumerate(["L1", "L2", "L3"]):
-                sy = szyny[f]
-                px = x - 10 + i*15
-                svg += f'<circle cx="{px}" cy="{sy}" r="3" fill="{kolory[f]}"/>'
-                svg += f'<line x1="{px}" y1="{sy}" x2="{px}" y2="180" stroke="{kolory[f]}" stroke-width="1.5"/>'
-        else:
-            f = u.faza if u.faza in ["L1", "L2", "L3"] else "L1"
-            sy = szyny[f]
-            svg += f'<circle cx="{x+10}" cy="{sy}" r="3" fill="{kolory[f]}"/>'
-            svg += f'<line x1="{x+10}" y1="{sy}" x2="{x+10}" y2="180" stroke="{kolory[f]}" stroke-width="1.5"/>'
-
-        n_pos = x + (40 if is_3p else 30)
-        pe_pos = x + (55 if is_3p else 45)
+        svg += f'<rect x="{x_offset-35}" y="150" width="70" height="90" fill="#ffffff" stroke="#2980b9" stroke-width="2" rx="4"/>'
         
-        svg += f'<circle cx="{n_pos}" cy="{szyny["N"]}" r="2.5" fill="{kolory["N"]}"/>'
-        svg += f'<line x1="{n_pos}" y1="{szyny["N"]}" x2="{n_pos}" y2="350" stroke="{kolory["N"]}" stroke-width="1" stroke-dasharray="4,2"/>'
-        svg += f'<circle cx="{pe_pos}" cy="{szyny["PE"]}" r="2.5" fill="{kolory["PE"]}"/>'
-        svg += f'<line x1="{pe_pos}" y1="{szyny["PE"]}" x2="{pe_pos}" y2="350" stroke="{kolory["PE"]}" stroke-width="1" stroke-dasharray="2,4"/>'
+        svg += f'<text x="{x_offset}" y="170" font-size="12" font-weight="bold" fill="#c0392b" text-anchor="middle">F{i+1}</text>'
+        svg += f'<text x="{x_offset}" y="195" font-size="14" font-weight="bold" text-anchor="middle">{u.charakterystyka}{u.prad}</text>'
         
-        bx = x - 20
-        bw = w
-        svg += f'<rect x="{bx}" y="180" width="{bw}" height="50" fill="#fff" stroke="#000" stroke-width="1.5"/>'
+        typ_aparatu = "MCB"
+        if "RCD" in u.nazwa or "Różnicówka" in u.nazwa: typ_aparatu = "RCD"
+        elif "SPD" in u.nazwa or "Ochronnik" in u.nazwa: typ_aparatu = "SPD"
+        elif "FR" in u.charakterystyka or "Rozłącznik" in u.nazwa: typ_aparatu = "ROZŁ"
         
-        if "FR" in u.charakterystyka or "Rozłącznik" in u.nazwa:
-            svg += f'<text x="{bx + bw/2}" y="200" font-size="10" font-weight="bold" text-anchor="middle">ROZŁ.</text>'
-        elif "RCD" in u.nazwa or "Różnicówka" in u.nazwa:
-            svg += f'<text x="{bx + bw/2}" y="195" font-size="10" font-weight="bold" text-anchor="middle">RCD</text>'
-            svg += f'<circle cx="{bx + bw/2 - 8}" cy="210" r="6" fill="none" stroke="#000" stroke-width="1"/>'
-            svg += f'<circle cx="{bx + bw/2 + 8}" cy="210" r="6" fill="none" stroke="#000" stroke-width="1"/>'
-        elif "SPD" in u.nazwa or "Ochronnik" in u.nazwa:
-            svg += f'<text x="{bx + bw/2}" y="200" font-size="10" font-weight="bold" text-anchor="middle">SPD</text>'
-            svg += f'<polygon points="{bx+10},{220} {bx+bw-10},{220} {bx+bw/2},{190}" fill="none" stroke="#000"/>'
-        else:
-            svg += f'<text x="{bx + bw/2}" y="200" font-size="10" font-weight="bold" text-anchor="middle">MCB</text>'
-            svg += f'<path d="M {bx+10} 210 L {bx+10} 220 L {bx+bw-10} 220 L {bx+bw-10} 210" fill="none" stroke="#000"/>'
-            
-        svg += f'<text x="{bx + bw/2}" y="175" font-size="11" font-weight="bold" text-anchor="middle">{u.charakterystyka}{u.prad}</text>'
+        svg += f'<text x="{x_offset}" y="225" font-size="10" fill="#7f8c8d" text-anchor="middle">{typ_aparatu} ({u.faza})</text>'
         
-        if is_3p:
-            for i, f in enumerate(["L1", "L2", "L3"]):
-                px = x - 10 + i*15
-                svg += f'<line x1="{px}" y1="230" x2="{px}" y2="350" stroke="{kolory[f]}" stroke-width="1.5"/>'
-                svg += f'<circle cx="{px}" cy="350" r="3" fill="#fff" stroke="#000" stroke-width="1"/>'
-        else:
-            svg += f'<line x1="{x+10}" y1="230" x2="{x+10}" y2="350" stroke="{kolory[f]}" stroke-width="1.5"/>'
-            svg += f'<circle cx="{x+10}" cy="350" r="3" fill="#fff" stroke="#000" stroke-width="1"/>'
-            
-        svg += f'<circle cx="{n_pos}" cy="350" r="3" fill="#fff" stroke="{kolory["N"]}" stroke-width="1"/>'
-        svg += f'<circle cx="{pe_pos}" cy="350" r="3" fill="#fff" stroke="{kolory["PE"]}" stroke-width="1"/>'
+        svg += f'<line x1="{x_offset}" y1="240" x2="{x_offset}" y2="320" stroke="#34495e" stroke-width="2"/>'
         
-        svg += f'<text x="{bx + bw/2 + 10}" y="380" font-size="12" font-weight="bold" text-anchor="start" transform="rotate(45 {bx + bw/2 + 10} 380)">{u.opis}</text>'
-        svg += f'<text x="{bx + bw/2 + 10}" y="480" font-size="10" fill="#555" text-anchor="start" transform="rotate(45 {bx + bw/2 + 10} 480)">Przewód: {u.przekroj}</text>'
+        svg += f'<rect x="{x_offset-10}" y="320" width="20" height="20" fill="#fff" stroke="#000" stroke-width="1.5"/>'
+        svg += f'<line x1="{x_offset-10}" y1="320" x2="{x_offset+10}" y2="340" stroke="#000" stroke-width="1"/>'
+        svg += f'<line x1="{x_offset+10}" y1="320" x2="{x_offset-10}" y2="340" stroke="#000" stroke-width="1"/>'
         
-        x += w + 30
+        svg += f'<line x1="{x_offset}" y1="340" x2="{x_offset}" y2="420" stroke="#34495e" stroke-width="1.5" stroke-dasharray="5,5"/>'
         
-    svg += f'<g transform="translate({svg_width-280}, {svg_height-80})">'
-    svg += '<rect x="0" y="0" width="260" height="70" fill="#fff" stroke="#000" stroke-width="2"/>'
-    svg += '<line x1="0" y1="20" x2="260" y2="20" stroke="#000" stroke-width="1"/>'
-    svg += '<line x1="0" y1="45" x2="260" y2="45" stroke="#000" stroke-width="1"/>'
-    svg += '<line x1="130" y1="0" x2="130" y2="45" stroke="#000" stroke-width="1"/>'
+        svg += f'<text x="{x_offset+10}" y="365" font-size="13" font-weight="bold" transform="rotate(45 {x_offset+10} 365)">{u.opis}</text>'
+        svg += f'<text x="{x_offset+10}" y="455" font-size="11" fill="#555" transform="rotate(45 {x_offset+10} 455)">Kabel: {u.przekroj}</text>'
+        
+        x_offset += 110
+        
+    svg += f'<g transform="translate({svg_width-300}, {svg_height-90})">'
+    svg += '<rect x="0" y="0" width="280" height="70" fill="#fff" stroke="#000" stroke-width="2"/>'
+    svg += '<line x1="0" y1="20" x2="280" y2="20" stroke="#000" stroke-width="1"/>'
+    svg += '<line x1="0" y1="45" x2="280" y2="45" stroke="#000" stroke-width="1"/>'
+    svg += '<line x1="140" y1="0" x2="140" y2="45" stroke="#000" stroke-width="1"/>'
     svg += '<text x="5" y="14" font-size="10" fill="#555">PROJEKTANT:</text>'
     svg += '<text x="35" y="38" font-size="12" font-weight="bold">M. Szymański</text>'
-    svg += '<text x="135" y="14" font-size="10" fill="#555">DATA:</text>'
-    svg += f'<text x="160" y="38" font-size="12" font-weight="bold">{datetime.now().strftime("%d.%m.%Y")}</text>'
-    svg += '<text x="5" y="60" font-size="11" font-weight="bold">Schemat Obwodu Elektrycznego</text>'
+    svg += '<text x="145" y="14" font-size="10" fill="#555">DATA:</text>'
+    svg += f'<text x="170" y="38" font-size="12" font-weight="bold">{datetime.now().strftime("%d.%m.%Y")}</text>'
+    svg += '<text x="5" y="60" font-size="12" font-weight="bold">Schemat Obwodów Rozdzielnicy</text>'
     svg += '</g>'
     
     svg += '</svg></div>'
