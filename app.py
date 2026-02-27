@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # --- KONFIGURACJA ---
-st.set_page_config(page_title="Projektant Rozdzielnicy - Stabilny Fundament", layout="wide")
+st.set_page_config(page_title="Projektant Rozdzielnicy - Przekroje Przewodów", layout="wide")
 
 if 'szyna' not in st.session_state:
     st.session_state['szyna'] = []
@@ -16,7 +16,21 @@ PRODUCENCI = {
     "Hager": "#00305d"
 }
 
-# --- CSS (Sprawdzony układ graficzny) ---
+# --- FUNKCJA DOBORU PRZEWODU ---
+def dobierz_przewod(prad_str):
+    try:
+        # Wyciągamy samą liczbę z prądu (np. z "16" lub "16A")
+        p = int(''.join(filter(str.isdigit, prad_str)))
+        if p <= 13: return "1.5 mm²"
+        elif p <= 19: return "2.5 mm²"
+        elif p <= 25: return "4.0 mm²"
+        elif p <= 35: return "6.0 mm²"
+        elif p <= 50: return "10.0 mm²"
+        else: return "16.0 mm²"
+    except:
+        return "wg projektu"
+
+# --- CSS ---
 st.markdown("""
     <style>
     .obudowa { background-color: #3d3d3d; padding: 25px; border-radius: 12px; border: 6px solid #222; }
@@ -48,6 +62,7 @@ class Urzadzenie:
         self.moduly = moduly
         self.faza = faza
         self.opis = opis
+        self.przewod = dobierz_przewod(prad)
 
 # --- BIBLIOTEKA ---
 BIBLIOTEKA = [
@@ -63,7 +78,7 @@ BIBLIOTEKA = [
 ]
 
 # --- PANEL BOCZNY ---
-st.sidebar.title("🛠️ Projektant v2.6")
+st.sidebar.title("🛠️ Projektant v2.7")
 prod_name = st.sidebar.selectbox("Producent:", list(PRODUCENCI.keys()))
 brand_color = PRODUCENCI[prod_name]
 
@@ -103,7 +118,6 @@ for u in st.session_state['szyna']:
 st.title("⚡ Projekt Rozdzielnicy")
 
 
-
 st.markdown('<div class="obudowa">', unsafe_allow_html=True)
 for r_i, rzad in enumerate(rzedy):
     if not rzad and len(st.session_state['szyna']) == 0:
@@ -135,10 +149,11 @@ for r_i, rzad in enumerate(rzedy):
         st.markdown(html_szyny, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- SPECYFIKACJA ---
+# --- SPECYFIKACJA Z PRZEKROJAMI ---
 if st.session_state['szyna']:
     st.divider()
     st.subheader("📋 Specyfikacja techniczna rzędowa")
+    
     for r_idx, rzad in enumerate(rzedy):
         if rzad:
             st.write(f"**Szyna nr {r_idx + 1} ({prod_name})**")
@@ -146,6 +161,7 @@ if st.session_state['szyna']:
                 "Nr": f"A{i+1}",
                 "Aparat": u.nazwa,
                 "Zabezpieczenie": f"{u.charakterystyka}{u.prad}A",
+                "Przewód (Cu)": u.przewod, # NOWA KOLUMNA
                 "Faza": u.faza,
                 "Przeznaczenie": u.opis
             } for i, u in enumerate(rzad)]
