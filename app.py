@@ -10,15 +10,18 @@ if 'szyna' not in st.session_state:
 if 'next_faza_idx' not in st.session_state:
     st.session_state['next_faza_idx'] = 0
 
-# --- 2. STYLE CSS ---
+# --- 2. STYLE CSS (OPTYMALIZACJA POD A4, NAGŁÓWEK I WYDRUK) ---
 st.markdown("""
     <style>
+    /* STYLE EKRANOWE */
     .obudowa { background-color: #333; padding: 25px; border-radius: 12px; }
     .szyna-din {
         display: flex; flex-direction: row; background-color: #b0b0b0;
         padding: 25px 5px; border-top: 10px solid #777; border-bottom: 10px solid #777;
         gap: 4px; margin-bottom: 15px; overflow-x: auto;
     }
+    
+    /* NAGŁÓWEK DOKUMENTACJI - OCZYSZCZONY ZGODNIE Z PROŚBĄ */
     .header-box {
         border: 3px solid #1f1f1f;
         padding: 0;
@@ -35,29 +38,49 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 2px;
     }
-    .schemat-box {
-        font-family: 'Courier New', monospace;
-        border: 2px solid #000;
-        padding: 20px;
-        background-color: #fdfdfd;
-        line-height: 1.2;
-        overflow-x: auto;
-    }
 
+    /* STYLE DRUKU (Ctrl+P) */
     @media print {
         section[data-testid="stSidebar"], .stButton, header, footer, [data-testid="stDecoration"], .no-print {
             display: none !important;
         }
-        .main .block-container { padding-top: 5mm !important; }
-        .obudowa { background-color: white !important; border: 2px solid black !important; }
-        .szyna-din { background-color: #f9f9f9 !important; border: 1px solid #000 !important; page-break-inside: avoid; }
-        .header-box { border: 2px solid black !important; }
-        .header-top { background-color: #f2f2f2 !important; color: black !important; border-bottom: 2px solid black; }
-        .schemat-box { border: 2px solid black !important; page-break-before: always; }
+        .main .block-container {
+            padding-top: 5mm !important;
+        }
+        .obudowa {
+            background-color: white !important;
+            border: 2px solid black !important;
+        }
+        .szyna-din {
+            background-color: #f9f9f9 !important;
+            border: 1px solid #000 !important;
+            page-break-inside: avoid;
+        }
+        .header-box {
+            border: 2px solid black !important;
+        }
+        .header-top {
+            background-color: #f2f2f2 !important;
+            color: black !important;
+            border-bottom: 2px solid black;
+        }
+        .copyright-footer {
+            position: fixed;
+            bottom: 5mm;
+            right: 5mm;
+            font-size: 10px;
+            color: #333;
+            display: block !important;
+        }
     }
     
     .copyright-screen {
-        text-align: right; font-size: 12px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;
+        text-align: right;
+        font-size: 12px;
+        color: #888;
+        margin-top: 30px;
+        border-top: 1px solid #eee;
+        padding-top: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -104,6 +127,16 @@ class Urzadzenie:
 st.sidebar.title("🛠️ Kreator Projektu")
 prod_name = st.sidebar.selectbox("Producent osprzętu:", list(PRODUCENCI.keys()))
 brand_color = PRODUCENCI[prod_name]
+
+st.sidebar.divider()
+st.sidebar.subheader("📝 Dane Inwestycji")
+klient = st.sidebar.text_input("Inwestor / Klient:", "Jan Kowalski")
+miejsce = st.sidebar.text_input("Miejsce montażu:", "Dom Jednorodzinny - Rozdzielnica R1")
+
+st.sidebar.divider()
+wsp_j = st.sidebar.slider("Współczynnik jednoczesności:", 0.1, 1.0, 0.6)
+limit_a = st.sidebar.number_input("Limit przedlicznikowy [A]:", value=25)
+
 st.sidebar.divider()
 kat = st.sidebar.selectbox("Kategoria:", list(DB_APARATY.keys()))
 ap_typ = st.sidebar.selectbox("Urządzenie:", DB_APARATY[kat], format_func=lambda x: f"{x['n']} ({x['c']})")
@@ -116,60 +149,87 @@ if st.sidebar.button("Dodaj do szafy ➡️", use_container_width=True):
     if ap_typ['m'] < 3: st.session_state['next_faza_idx'] = (st.session_state['next_faza_idx'] + 1) % 3
     st.rerun()
 
+if st.sidebar.button("Usuń ostatni ⬅️"):
+    if st.session_state['szyna']: st.session_state['szyna'].pop(); st.rerun()
+
 if st.sidebar.button("Resetuj projekt 🗑️"):
     st.session_state['szyna'] = []; st.session_state['next_faza_idx'] = 0; st.rerun()
 
-# --- 5. NAGŁÓWEK ---
-st.markdown(f'<div class="header-box"><div class="header-top">Dokumentacja Techniczna Rozdzielnicy</div></div>', unsafe_allow_html=True)
+# --- 5. NAGŁÓWEK DOKUMENTACJI ---
+st.markdown(f"""
+    <div class="header-box">
+        <div class="header-top">Dokumentacja Techniczna Rozdzielnicy</div>
+    </div>
+""", unsafe_allow_html=True)
 
-# --- 6. WIZUALIZACJA SZYN ---
+# --- 6. ANALIZA OBCIĄŻENIA ---
+obc = {"L1": 0.0, "L2": 0.0, "L3": 0.0}
+for u in st.session_state['szyna']:
+    if u.charakterystyka not in ["FR", "SPD"]:
+        if u.faza == "L123":
+            for f in ["L1", "L2", "L3"]: obc[f] += u.val_a * wsp_j
+        else: obc[u.faza] += u.val_a * wsp_j
+
+# Wizualizacja obciążenia (Tylko na ekranie)
+cols = st.columns(3)
+for i, f in enumerate(["L1", "L2", "L3"]):
+    p_proc = min(obc[f] / limit_a, 1.1)
+    with cols[i]:
+        st.metric(f"Faza {f}", f"{obc[f]:.1f} A")
+        b_c = "green" if p_proc < 0.8 else "orange" if p_proc < 1.0 else "red"
+        st.markdown(f'<div class="no-print" style="background:#eee;height:8px;width:100%;border-radius:4px;"><div style="background:{b_c};height:8px;width:{p_proc*100}%;border-radius:4px;"></div></div>', unsafe_allow_html=True)
+
+# --- 7. WIZUALIZACJA SZYN ---
+rzedy = [[]]; akt_m = 0
+for u in st.session_state['szyna']:
+    if akt_m + u.moduly > RZAD_MAX_MOD: rzedy.append([u]); akt_m = u.moduly
+    else: rzedy[-1].append(u); akt_m += u.moduly
+
+st.markdown('<div class="obudowa">', unsafe_allow_html=True)
+for r_i, rzad in enumerate(rzedy):
+    if rzad:
+        st.write(f"**SZYNIA DIN NR {r_i+1}**")
+        html_szyny = '<div class="szyna-din">'
+        for u in rzad:
+            f_c = {"L1":"red","L2":"black","L3":"#555","L123":"blue"}.get(u.faza)
+            html_szyny += f"""
+            <div style="width:{u.moduly*45}px; border:1px solid #000; background:#fff; flex-shrink:0; text-align:center; min-height:270px; display:flex; flex-direction:column; border-top:8px solid {brand_color};">
+                <div style="font-size:9px; font-weight:bold; color:{f_c}; padding:3px;">{u.faza}</div>
+                <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
+                    <div style="font-size:19px; font-weight:900; color:#d35400;">{u.charakterystyka}{u.prad}</div>
+                    <div style="font-size:9px; color:#555;">{u.przekroj}</div>
+                </div>
+                <div style="border-top:1px solid #ddd; padding:4px; height:50px; font-size:9px; font-weight:bold; display:flex; align-items:center; justify-content:center; background:#f9f9f9;">{u.opis}</div>
+                <div style="background:#1a252f; color:#f1c40f; font-size:8px; padding:3px;">{u.moduly}M</div>
+            </div>"""
+        html_szyny += '</div>'
+        st.markdown(html_szyny, unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
+
+# --- 8. TABELA I ZESTAWIENIE ---
 if st.session_state['szyna']:
-    rzedy = [[]]; akt_m = 0
-    for u in st.session_state['szyna']:
-        if akt_m + u.moduly > RZAD_MAX_MOD: rzedy.append([u]); akt_m = u.moduly
-        else: rzedy[-1].append(u); akt_m += u.moduly
+    st.divider()
+    st.header("1. Specyfikacja techniczna obwodów")
+    df = pd.DataFrame([{
+        "Nr": i+1, "Aparat": f"{u.charakterystyka}{u.prad}", "Faza": u.faza,
+        "Przewód": u.przekroj, "Opis": u.opis
+    } for i, u in enumerate(st.session_state['szyna'])])
+    st.table(df)
 
-    st.markdown('<div class="obudowa">', unsafe_allow_html=True)
-    for r_i, rzad in enumerate(rzedy):
-        if rzad:
-            st.write(f"**SZYNIA DIN NR {r_i+1}**")
-            html_szyny = '<div class="szyna-din">'
-            for u in rzad:
-                f_c = {"L1":"red","L2":"black","L3":"#555","L123":"blue"}.get(u.faza)
-                html_szyny += f"""
-                <div style="width:{u.moduly*45}px; border:1px solid #000; background:#fff; flex-shrink:0; text-align:center; min-height:270px; display:flex; flex-direction:column; border-top:8px solid {brand_color};">
-                    <div style="font-size:9px; font-weight:bold; color:{f_c}; padding:3px;">{u.faza}</div>
-                    <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
-                        <div style="font-size:19px; font-weight:900; color:#d35400;">{u.charakterystyka}{u.prad}</div>
-                        <div style="font-size:9px; color:#555;">{u.przekroj}</div>
-                    </div>
-                    <div style="border-top:1px solid #ddd; padding:4px; height:50px; font-size:9px; font-weight:bold; display:flex; align-items:center; justify-content:center; background:#f9f9f9;">{u.opis}</div>
-                    <div style="background:#1a252f; color:#f1c40f; font-size:8px; padding:3px;">{u.moduly}M</div>
-                </div>"""
-            html_szyny += '</div>'
-            st.markdown(html_szyny, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # --- 7. SCHEMAT JEDNOKRESKOWY ---
-    st.subheader("2. Schemat jednokreskowy ideowy")
-    sch = "ZASILANIE: Sieć TN-S 3x230/400V\\n┃\\n"
-    fr = next((u for u in st.session_state['szyna'] if u.charakterystyka == "FR"), None)
-    spd = next((u for u in st.session_state['szyna'] if u.charakterystyka == "SPD"), None)
-    if fr: sch += f"┣━[ Q1: {fr.charakterystyka} {fr.prad}A ] Rozłącznik Główny\\n┃\\n"
-    if spd: sch += f"┣━[ F1: {spd.charakterystyka} ] Ogranicznik Przepięć\\n┃\\n"
-    sch += "┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3\\n"
-    for u in st.session_state['szyna']:
-        if u.charakterystyka not in ["FR", "SPD"]:
-            sch += f"┃    ┣━({u.faza})━[ {u.charakterystyka}{u.prad} ]─── {u.przekroj} ───> {u.opis}\\n"
-    st.markdown(f'<div class="schemat-box"><pre style="font-size:14px;">{sch}</pre></div>', unsafe_allow_html=True)
-
-    # --- 8. TABELE ---
-    st.header("3. Zestawienie materiałowe")
+    st.header("2. Zbiorcze zestawienie materiałów")
     zestawienie = [f"{u.nazwa} {u.charakterystyka}{u.prad} ({prod_name})" for u in st.session_state['szyna']]
     df_bom = pd.Series(zestawienie).value_counts().reset_index()
-    df_bom.columns = ['Element', 'Ilość [szt]']
+    df_bom.columns = ['Element instalacji', 'Ilość [szt]']
     st.table(df_bom)
 
-    st.markdown(f'<div class="copyright-screen no-print">© {datetime.now().year} Marcin Szymański</div>', unsafe_allow_html=True)
+    # STOPKA AUTORSKA
+    st.markdown(f"""
+        <div class="copyright-screen no-print">
+            © {datetime.now().year} Opracowanie: <b>Marcin Szymański</b> | Wszystkie prawa zastrzeżone
+        </div>
+        <div class="copyright-footer no-print" style="display:none;">
+            Autor projektu: Marcin Szymański
+        </div>
+    """, unsafe_allow_html=True)
 else:
-    st.info("Dodaj urządzenia, aby wygenerować schemat i dokumentację.")
+    st.info("Dodaj urządzenia, aby wygenerować dokumentację.")
