@@ -3,48 +3,63 @@ import streamlit as st
 # --- KONFIGURACJA STRONY ---
 st.set_page_config(page_title="Projektant Rozdzielnicy", layout="wide")
 
-# --- CUSTOM CSS (Wygląd Aparatów) ---
+# --- POPRAWIONY CUSTOM CSS ---
 st.markdown("""
     <style>
     .szyna-din {
         display: flex;
         flex-direction: row;
-        align-items: flex-start;
+        align-items: stretch; /* Rozciąga aparaty do tej samej wysokości */
         overflow-x: auto;
-        padding: 20px;
-        background-color: #e0e0e0;
-        border-radius: 5px;
-        border-top: 15px solid #bdc3c7;
-        border-bottom: 15px solid #bdc3c7;
-        min-height: 350px;
+        padding: 30px 20px;
+        background-color: #d1d1d1;
+        border-radius: 8px;
+        border-top: 20px solid #a0a0a0;
+        border-bottom: 20px solid #a0a0a0;
+        min-height: 300px;
+        gap: 2px; /* Odstęp między aparatami */
     }
     .aparat {
         background-color: #ffffff;
-        border: 2px solid #333;
+        border: 2px solid #444;
         border-radius: 4px;
-        margin-right: 2px;
-        padding: 10px 5px;
+        padding: 15px 5px;
         text-align: center;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        box-shadow: 3px 0px 5px rgba(0,0,0,0.1);
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
+        justify-content: flex-start;
+        min-height: 220px;
     }
     .aparat-naglowek {
         font-weight: bold;
-        font-size: 12px;
-        border-bottom: 1px solid #ccc;
-        margin-bottom: 10px;
-        background: #f0f0f0;
-    }
-    .aparat-prad {
-        font-size: 18px;
-        font-weight: bold;
-        color: #d35400;
+        font-size: 10px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 15px;
+        text-transform: uppercase;
     }
     .aparat-char {
-        font-size: 14px;
+        font-size: 16px;
+        font-weight: bold;
         color: #2c3e50;
+    }
+    .aparat-prad {
+        font-size: 24px;
+        font-weight: 900;
+        color: #d35400;
+        margin-bottom: 10px;
+    }
+    .aparat-footer {
+        margin-top: auto;
+        font-size: 10px;
+        font-weight: bold;
+        color: #7f8c8d;
+        border-top: 1px solid #eee;
+        padding-top: 5px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -62,60 +77,65 @@ class Urzadzenie:
 if 'szyna' not in st.session_state:
     st.session_state.szyna = []
 
-# --- BIBLIOTEKA (W SIDEBARZE) ---
-st.sidebar.header("🛠️ Panel Konfiguracyjny")
+# --- PANEL BOCZNY (Sidebar) ---
+st.sidebar.header("🛠️ Panel Instalatora")
 
 biblioteka = [
-    Urzadzenie("Wyłącznik nadprądowy 1P", "B", 10, 1, "#3498db"),
-    Urzadzenie("Wyłącznik nadprądowy 1P", "B", 16, 1, "#3498db"),
-    Urzadzenie("Wyłącznik nadprądowy 1P", "C", 20, 1, "#2980b9"),
-    Urzadzenie("Wyłącznik nadprądowy 3P", "B", 25, 3, "#e67e22"),
-    Urzadzenie("Wyłącznik nadprądowy 3P", "C", 32, 3, "#d35400"),
+    Urzadzenie("Wyłącznik 1P", "B", 10, 1, "#3498db"),
+    Urzadzenie("Wyłącznik 1P", "B", 16, 1, "#3498db"),
+    Urzadzenie("Wyłącznik 1P", "C", 20, 1, "#2980b9"),
+    Urzadzenie("Wyłącznik 3P", "B", 25, 3, "#e67e22"),
+    Urzadzenie("Wyłącznik 3P", "C", 32, 3, "#d35400"),
     Urzadzenie("Różnicówka 4P", "RCCB", 40, 4, "#27ae60"),
-    Urzadzenie("Ochronnik przepięć", "T1+T2", "SPD", 4, "#c0392b"),
+    Urzadzenie("Ochronnik T1+T2", "SPD", "", 4, "#c0392b"),
 ]
 
-opcje_tekstowe = [f"{u.nazwa} ({u.charakterystyka}{u.prad})" for u in biblioteka]
-wybor_nazwa = st.sidebar.selectbox("Wybierz aparat:", opcje_tekstowe)
+opcje_tekstowe = [f"{u.nazwa} {u.charakterystyka}{u.prad}" for u in biblioteka]
+wybor_nazwa = st.sidebar.selectbox("Wybierz aparat do montażu:", opcje_tekstowe)
 
 if st.sidebar.button("Dodaj do szyny ➡️"):
     wybrany = biblioteka[opcje_tekstowe.index(wybor_nazwa)]
     st.session_state.szyna.append(wybrany)
-    st.toast(f"Dodano {wybrany.nazwa}")
+    st.rerun()
 
 if st.sidebar.button("Usuń ostatni ⬅️"):
     if st.session_state.szyna:
         st.session_state.szyna.pop()
         st.rerun()
 
-if st.sidebar.button("Wyczyść rozdzielnicę 🗑️"):
+if st.sidebar.button("Wyczyść projekt 🗑️"):
     st.session_state.szyna = []
     st.rerun()
 
 # --- WIZUALIZACJA GŁÓWNA ---
-st.title("⚡ Wirtualna Szyna DIN")
-st.write("Aparaty montowane od lewej do prawej:")
+st.title("⚡ Wirtualna Rozdzielnica")
+st.info("Aparaty montowane na szynie DIN (widok od lewej do prawej)")
 
-# Generowanie HTML dla szyny
-html_szyny = '<div class="szyna-din">'
+# START KONTENERA SZYNY (poza pętlą!)
+html_output = '<div class="szyna-din">'
 
+# PĘTLA GENERUJĄCA APARATY
 for u in st.session_state.szyna:
-    # Szerokość modułu: 1 moduł = ok. 40px
-    szerokosc = u.moduly * 45
-    html_szyny += f"""
-    <div class="aparat" style="width: {szerokosc}px; border-top: 10px solid {u.kolor};">
+    szerokosc = u.moduly * 45  # 1 moduł = 45px
+    html_output += f"""
+    <div class="aparat" style="width: {szerokosc}px; border-top: 12px solid {u.kolor};">
         <div class="aparat-naglowek">{u.nazwa}</div>
         <div class="aparat-char">{u.charakterystyka}</div>
-        <div class="aparat-prad">{u.prad if u.prad != "SPD" else ""}</div>
-        <div style="font-size: 10px; margin-top: auto;">{u.moduly} MOD</div>
+        <div class="aparat-prad">{u.prad}</div>
+        <div class="aparat-footer">{u.moduly} MOD</div>
     </div>
     """
 
-html_szyny += '</div>'
+# KONIEC KONTENERA SZYNY (poza pętlą!)
+html_output += '</div>'
 
-st.markdown(html_szyny, unsafe_allow_html=True)
+# WYŚWIETLENIE GOTOWEGO HTML
+st.markdown(html_output, unsafe_allow_html=True)
 
-# Statystyki poniżej
+# STATYSTYKI
 st.markdown("---")
 suma_mod = sum(u.moduly for u in st.session_state.szyna)
-st.metric("Całkowita szerokość", f"{suma_mod} modułów")
+c1, c2, c3 = st.columns(3)
+c1.metric("Suma modułów", f"{suma_mod} / 12")
+c2.metric("Szerokość mm", f"{suma_mod * 17.5} mm")
+c3.write("Status: Fundamenty poprawne ✅")
