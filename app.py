@@ -241,8 +241,6 @@ else:
 
 if st.session_state['szyna']:
     st.sidebar.divider()
-    st.sidebar.subheader("🖨️ Alternatywny system wydruku")
-    st.sidebar.info("Pobierz czysty plik, otwórz go w przeglądarce i wciśnij Ctrl+P. Wydrukuje się idealnie z podziałem na strony.")
     
     html_szyny_print = "<h2>1. Widok rozmieszczenia aparatów</h2>\n"
     for r_i, rzad in enumerate(rzedy):
@@ -275,7 +273,6 @@ if st.session_state['szyna']:
             table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
             th, td {{ border: 1px solid #000; padding: 8px; text-align: left; font-size: 14px; }}
             .page-break {{ page-break-before: always; }}
-            .schemat {{ font-family: monospace; white-space: pre; line-height: 1.3; font-size: 14px; border: 1px solid #000; padding: 15px; background-color: #fdfdfd; margin-top: 20px; }}
             .header {{ text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; font-size: 20px; }}
             @media print {{
                 @page {{ size: A4 portrait; margin: 10mm; }}
@@ -306,25 +303,41 @@ if st.session_state['szyna']:
         <div class="page-break"></div>
         
         <h2>3. Schemat jednokreskowy ideowy</h2>
-        <div class="schemat">
     """
     
-    html_content += "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\\n┃\\n"
     glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
     obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
     
-    for u in glowny:
-        pref = "Q" if u.charakterystyka == "FR" else "F"
-        html_content += f"┣━[ {pref}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny\\n┃\\n"
+    svg_height = 160 + len(obwody) * 60
     
-    html_content += "┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3\\n"
+    svg = f'<div style="text-align: left; margin-top: 20px; border: 1px solid #000; padding: 20px; background-color: #fdfdfd;">'
+    svg += f'<svg width="100%" height="{svg_height}" xmlns="http://www.w3.org/2000/svg" style="font-family: sans-serif;">'
+    
+    svg += '<line x1="80" y1="20" x2="80" y2="80" stroke="#000" stroke-width="3"/>'
+    svg += '<text x="100" y="45" font-size="14" font-weight="bold">ZASILANIE: Sieć TN-S 3x230/400V 50Hz</text>'
+    
+    glowny_txt = " + ".join([f"{u.charakterystyka}{u.prad}" for u in glowny])
+    if not glowny_txt: glowny_txt = "Rozłącznik Główny"
+    svg += '<rect x="60" y="80" width="40" height="40" fill="#fff" stroke="#000" stroke-width="2"/>'
+    svg += f'<text x="110" y="105" font-size="14" font-weight="bold">{glowny_txt}</text>'
+    
+    svg += f'<line x1="80" y1="120" x2="80" y2="{svg_height-20}" stroke="#000" stroke-width="3"/>'
+    
+    y = 160
     for u in obwody:
-        sym = "—[—" if u.moduly == 1 else "—[≡—"
-        html_content += f"┃    ┣━({u.faza})━{sym} {u.charakterystyka}{u.prad} ]——— {u.przekroj} ———> {u.opis}\\n"
-    html_content += "┃    ▼\\n⚡ REZERWA"
+        svg += f'<circle cx="80" cy="{y}" r="4" fill="#000"/>'
+        svg += f'<line x1="80" y1="{y}" x2="130" y2="{y}" stroke="#000" stroke-width="2"/>'
+        svg += f'<rect x="130" y="{y-15}" width="60" height="30" fill="#fff" stroke="#000" stroke-width="2"/>'
+        svg += f'<text x="160" y="{y+4}" font-size="12" font-weight="bold" text-anchor="middle">{u.charakterystyka}{u.prad}</text>'
+        svg += f'<line x1="190" y1="{y}" x2="280" y2="{y}" stroke="#000" stroke-width="1.5" stroke-dasharray="4"/>'
+        svg += f'<text x="290" y="{y-4}" font-size="13" font-weight="bold">{u.opis}</text>'
+        svg += f'<text x="290" y="{y+12}" font-size="11" fill="#555">Faza: {u.faza} | Przewód: {u.przekroj}</text>'
+        y += 60
+        
+    svg += '</svg></div>'
+    html_content += svg
     
     html_content += f"""
-        </div>
         <div style="text-align: right; font-size: 10px; margin-top: 30px;">
             © {datetime.now().year} Opracowanie: Marcin Szymański | Wszystkie prawa zastrzeżone
         </div>
