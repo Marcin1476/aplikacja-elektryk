@@ -320,7 +320,7 @@ if st.session_state['szyna']:
     """
     
     obwody_svg = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
-    svg_width = max(1150, 150 + len(obwody_svg) * 80)
+    svg_width = max(1400, 150 + len(obwody_svg) * 120)
     svg_height = 420
     
     svg = f'<div style="text-align: left; margin-top: 20px; border: 2px solid #000; background-color: #fafafa; padding-bottom: 20px; overflow-x: auto;">'
@@ -412,7 +412,7 @@ if st.session_state['szyna']:
         svg += f'<text x="{x_offset-5}" y="250" font-size="11" font-family="sans-serif" transform="rotate(90 {x_offset-5} 250)">{u.opis}</text>'
         svg += f'<text x="{x_offset+10}" y="250" font-size="11" font-family="sans-serif" transform="rotate(90 {x_offset+10} 250)">{cab}</text>'
         
-        x_offset += 80
+        x_offset += 120
         
     svg += '</svg></div>'
     html_content += svg
