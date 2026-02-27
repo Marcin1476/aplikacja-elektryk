@@ -233,3 +233,41 @@ if st.session_state['szyna']:
     """, unsafe_allow_html=True)
 else:
     st.info("Dodaj urządzenia, aby wygenerować dokumentację.")
+    # --- 9. MODUŁ SCHEMATU JEDNOKRESKOWEGO (DODATEK) ---
+if st.session_state['szyna']:
+    st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
+    st.header("3. Schemat jednokreskowy ideowy")
+    
+    # Inicjalizacja schematu
+    sch = "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\n"
+    sch += "┃\n"
+    
+    # Logika segregacji dla czytelności schematu
+    glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
+    obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
+    
+    # Rysowanie pnia zasilającego
+    for u in glowny:
+        prefiks = "Q" if u.charakterystyka == "FR" else "F"
+        sch += f"┣━[ {prefiks}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny\n┃\n"
+    
+    sch += "┣━━━━┳━━━━┳━━━━ MAGISTRALA L1, L2, L3\n"
+    
+    # Rysowanie gałęzi odbiorczych
+    for u in obwody:
+        symbol = "—[—" if u.moduly == 1 else "—[≡—"
+        sch += f"┃    ┣━({u.faza})━{symbol} {u.charakterystyka}{u.prad} ]——— {u.przekroj} ———> {u.opis}\n"
+    
+    sch += "┃    ▼\n"
+    sch += "⚡ REZERWA / ROZBUDOWA"
+
+    # Wyświetlanie w dedykowanym kontenerze CSS (zdefiniowanym w fundamencie)
+    st.markdown(f'<div class="schemat-box"><pre style="font-size:14px; line-height:1.2;">{sch}</pre></div>', unsafe_allow_html=True)
+
+    # Dodatkowa nota pod schematem (tylko na wydruku)
+    st.markdown(f"""
+        <div class="print-only" style="font-size: 10px; font-style: italic; margin-top: 10px;">
+            Schemat jednokreskowy wygenerowany automatycznie na podstawie zestawienia aparatów. 
+            Przekroje przewodów dobrano zgodnie z obciążalnością prądową zabezpieczeń.
+        </div>
+    """, unsafe_allow_html=True)
