@@ -1,85 +1,121 @@
 import streamlit as st
 
 # --- KONFIGURACJA STRONY ---
-st.set_page_config(page_title="Wirtualna Rozdzielnica", layout="wide")
+st.set_page_config(page_title="Projektant Rozdzielnicy", layout="wide")
 
-# --- STYLE CSS (opcjonalne, dla lepszego wyglądu) ---
+# --- CUSTOM CSS (Wygląd Aparatów) ---
 st.markdown("""
     <style>
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
-    .device-card { border: 2px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 10px; background-color: #f8f9fa; }
+    .szyna-din {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        overflow-x: auto;
+        padding: 20px;
+        background-color: #e0e0e0;
+        border-radius: 5px;
+        border-top: 15px solid #bdc3c7;
+        border-bottom: 15px solid #bdc3c7;
+        min-height: 350px;
+    }
+    .aparat {
+        background-color: #ffffff;
+        border: 2px solid #333;
+        border-radius: 4px;
+        margin-right: 2px;
+        padding: 10px 5px;
+        text-align: center;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .aparat-naglowek {
+        font-weight: bold;
+        font-size: 12px;
+        border-bottom: 1px solid #ccc;
+        margin-bottom: 10px;
+        background: #f0f0f0;
+    }
+    .aparat-prad {
+        font-size: 18px;
+        font-weight: bold;
+        color: #d35400;
+    }
+    .aparat-char {
+        font-size: 14px;
+        color: #2c3e50;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # --- MODELE DANYCH ---
 class Urzadzenie:
-    def __init__(self, nazwa, charakterystyka, prad, moduly):
+    def __init__(self, nazwa, charakterystyka, prad, moduly, kolor="#3498db"):
         self.nazwa = nazwa
         self.charakterystyka = charakterystyka
         self.prad = prad
         self.moduly = moduly
+        self.kolor = kolor
 
-    def __str__(self):
-        return f"{self.charakterystyka}{self.prad}A | {self.nazwa}"
+# --- INICJALIZACJA SESJI ---
+if 'szyna' not in st.session_state:
+    st.session_state.szyna = []
 
-# --- INICJALIZACJA SESJI (Magazyn danych projektu) ---
-if 'projekt_rozdzielnicy' not in st.session_state:
-    st.session_state.projekt_rozdzielnicy = []
+# --- BIBLIOTEKA (W SIDEBARZE) ---
+st.sidebar.header("🛠️ Panel Konfiguracyjny")
 
-# --- BIBLIOTEKA URZĄDZEŃ (Fundament) ---
 biblioteka = [
-    Urzadzenie("Wyłącznik nadprądowy 1P", "B", 10, 1),
-    Urzadzenie("Wyłącznik nadprądowy 1P", "B", 16, 1),
-    Urzadzenie("Wyłącznik nadprądowy 1P", "C", 20, 1),
-    Urzadzenie("Wyłącznik nadprądowy 3P", "B", 25, 3),
-    Urzadzenie("Wyłącznik nadprądowy 3P", "C", 32, 3),
-    Urzadzenie("Wyłącznik Różnicowoprądowy 4P", "AC", 40, 4),
-    Urzadzenie("Ogranicznik przepięć T1+T2", "Klasa", "B+C", 4),
+    Urzadzenie("Wyłącznik nadprądowy 1P", "B", 10, 1, "#3498db"),
+    Urzadzenie("Wyłącznik nadprądowy 1P", "B", 16, 1, "#3498db"),
+    Urzadzenie("Wyłącznik nadprądowy 1P", "C", 20, 1, "#2980b9"),
+    Urzadzenie("Wyłącznik nadprądowy 3P", "B", 25, 3, "#e67e22"),
+    Urzadzenie("Wyłącznik nadprądowy 3P", "C", 32, 3, "#d35400"),
+    Urzadzenie("Różnicówka 4P", "RCCB", 40, 4, "#27ae60"),
+    Urzadzenie("Ochronnik przepięć", "T1+T2", "SPD", 4, "#c0392b"),
 ]
 
-# --- INTERFEJS UŻYTKOWNIKA ---
-st.title("⚡ Asystent Instalatora: Projektowanie Rozdzielnicy")
+opcje_tekstowe = [f"{u.nazwa} ({u.charakterystyka}{u.prad})" for u in biblioteka]
+wybor_nazwa = st.sidebar.selectbox("Wybierz aparat:", opcje_tekstowe)
 
-col1, col2 = st.columns([1, 2])
+if st.sidebar.button("Dodaj do szyny ➡️"):
+    wybrany = biblioteka[opcje_tekstowe.index(wybor_nazwa)]
+    st.session_state.szyna.append(wybrany)
+    st.toast(f"Dodano {wybrany.nazwa}")
 
-with col1:
-    st.header("🛠️ Dobór aparatury")
-    
-    # Wybór urządzenia
-    opcje_tekstowe = [str(u) for u in biblioteka]
-    wybor = st.selectbox("Wybierz urządzenie z biblioteki:", opcje_tekstowe)
-    
-    # Przycisk dodawania
-    if st.button("Dodaj do szyny DIN"):
-        indeks = opcje_tekstowe.index(wybor)
-        wybrany_obiekt = biblioteka[indeks]
-        st.session_state.projekt_rozdzielnicy.append(wybrany_obiekt)
-        st.toast(f"Dodano {wybrany_obiekt.nazwa}!", icon="✅")
-
-    if st.button("Wyczyść wszystko 🗑️"):
-        st.session_state.projekt_rozdzielnicy = []
+if st.sidebar.button("Usuń ostatni ⬅️"):
+    if st.session_state.szyna:
+        st.session_state.szyna.pop()
         st.rerun()
 
-with col2:
-    st.header("📋 Widok projektu")
-    
-    if not st.session_state.projekt_rozdzielnicy:
-        st.info("Twoja rozdzielnica jest jeszcze pusta. Wybierz aparaty z lewej strony.")
-    else:
-        suma_modulow = 0
-        for i, urz in enumerate(st.session_state.projekt_rozdzielnicy):
-            with st.container():
-                st.markdown(f"""
-                <div class="device-card">
-                    <strong>{i+1}. {urz.nazwa}</strong><br>
-                    Charakterystyka: <code>{urz.charakterystyka}</code> | Prąd: <code>{urz.prad}A</code> | Szerokość: <code>{urz.moduly} mod.</code>
-                </div>
-                """, unsafe_allow_html=True)
-                suma_modulow += urz.moduly
-        
-        st.markdown("---")
-        st.metric("Całkowita zajętość miejsca", f"{suma_modulow} Modułów DIN")
+if st.sidebar.button("Wyczyść rozdzielnicę 🗑️"):
+    st.session_state.szyna = []
+    st.rerun()
 
-# Stopka techniczna
-st.sidebar.markdown("### ℹ️ Informacje o systemie")
-st.sidebar.info("Aplikacja pozwala na wirtualny montaż zabezpieczeń na szynie DIN.")
+# --- WIZUALIZACJA GŁÓWNA ---
+st.title("⚡ Wirtualna Szyna DIN")
+st.write("Aparaty montowane od lewej do prawej:")
+
+# Generowanie HTML dla szyny
+html_szyny = '<div class="szyna-din">'
+
+for u in st.session_state.szyna:
+    # Szerokość modułu: 1 moduł = ok. 40px
+    szerokosc = u.moduly * 45
+    html_szyny += f"""
+    <div class="aparat" style="width: {szerokosc}px; border-top: 10px solid {u.kolor};">
+        <div class="aparat-naglowek">{u.nazwa}</div>
+        <div class="aparat-char">{u.charakterystyka}</div>
+        <div class="aparat-prad">{u.prad if u.prad != "SPD" else ""}</div>
+        <div style="font-size: 10px; margin-top: auto;">{u.moduly} MOD</div>
+    </div>
+    """
+
+html_szyny += '</div>'
+
+st.markdown(html_szyny, unsafe_allow_html=True)
+
+# Statystyki poniżej
+st.markdown("---")
+suma_mod = sum(u.moduly for u in st.session_state.szyna)
+st.metric("Całkowita szerokość", f"{suma_mod} modułów")
