@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import base64
 
 st.set_page_config(page_title="Projektant Rozdzielnicy - Marcin Szymański", layout="wide")
 
@@ -239,10 +238,10 @@ if st.session_state['szyna']:
 else:
     st.info("Dodaj urządzenia, aby wygenerować pełną dokumentację.")
 
+import base64
+
 if st.session_state['szyna']:
     st.sidebar.divider()
-    st.sidebar.subheader("🖨️ Alternatywny system wydruku")
-    st.sidebar.info("Pobierz czysty plik, otwórz go w przeglądarce i wciśnij Ctrl+P. Wydrukuje się idealnie z podziałem na strony.")
     
     html_szyny_print = "<h2>1. Widok rozmieszczenia aparatów</h2>\n"
     for r_i, rzad in enumerate(rzedy):
