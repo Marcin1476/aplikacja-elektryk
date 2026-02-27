@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import base64
 
 st.set_page_config(page_title="Projektant Rozdzielnicy - Marcin Szymański", layout="wide")
 
@@ -44,52 +45,30 @@ st.markdown("""
         line-height: 1.2 !important;
         margin-top: 20px;
     }
-    
     @media print {
-        /* OPCJA ATOMOWA: Zdjęcie blokad przewijania ze wszystkich elementów Streamlita */
-        html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, .block-container, div, section, main {
-            height: auto !important;
-            max-height: none !important;
-            overflow: visible !important;
-            display: block !important;
-            position: relative !important;
-        }
-
-        /* Ukrycie paska bocznego i przycisków */
         section[data-testid="stSidebar"], .stButton, header, footer, [data-testid="stDecoration"], .no-print {
             display: none !important;
         }
-        
-        /* Marginesy do druku */
-        @page { margin: 1cm; }
-        .main .block-container { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
-        
-        .obudowa { background-color: white !important; border: 2px solid black !important; padding: 10px !important; }
+        .main .block-container { padding-top: 5mm !important; }
+        .obudowa { background-color: white !important; border: 2px solid black !important; }
         .szyna-din { background-color: #f9f9f9 !important; border: 1px solid #000 !important; page-break-inside: avoid; }
         .header-box { border: 2px solid black !important; }
         .header-top { background-color: #f2f2f2 !important; color: black !important; border-bottom: 2px solid black; }
         
-        /* Znacznik podziału stron działający natywnie na czystym HTML */
         .print-page-break {
             page-break-before: always !important;
-            break-before: page !important;
             display: block !important;
-            height: 0px !important;
-            border: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
         }
         
         .copyright-footer {
             position: fixed;
-            bottom: 0;
-            right: 0;
+            bottom: 5mm;
+            right: 5mm;
             font-size: 10px;
             color: #333;
             display: block !important;
         }
     }
-    
     .copyright-screen {
         text-align: right; font-size: 12px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;
     }
@@ -259,17 +238,31 @@ if st.session_state['szyna']:
     """, unsafe_allow_html=True)
 else:
     st.info("Dodaj urządzenia, aby wygenerować pełną dokumentację.")
-    # ==========================================
-# --- MODUŁ EKSPORTU DO DRUKU (NIEZAWODNY) ---
-# ==========================================
-import base64
 
 if st.session_state['szyna']:
     st.sidebar.divider()
     st.sidebar.subheader("🖨️ Alternatywny system wydruku")
     st.sidebar.info("Pobierz czysty plik, otwórz go w przeglądarce i wciśnij Ctrl+P. Wydrukuje się idealnie z podziałem na strony.")
     
-    # Generowanie czystego kodu dla drukarki
+    html_szyny_print = "<h2>1. Widok rozmieszczenia aparatów</h2>\n"
+    for r_i, rzad in enumerate(rzedy):
+        if rzad:
+            html_szyny_print += f'<div style="font-weight:bold; margin-bottom: 5px; font-family: sans-serif;">SZYNA DIN NR {r_i+1}</div>'
+            html_szyny_print += '<div style="display: flex; flex-direction: row; background-color: #d0d0d0; padding: 15px 5px; border-top: 6px solid #777; border-bottom: 6px solid #777; gap: 4px; margin-bottom: 25px; page-break-inside: avoid; font-family: sans-serif;">'
+            for u in rzad:
+                f_c = {"L1":"red","L2":"black","L3":"#555","L123":"blue"}.get(u.faza)
+                html_szyny_print += f"""
+                <div style="width:{u.moduly*38}px; border:1px solid #000; background:#fff; flex-shrink:0; text-align:center; min-height:180px; display:flex; flex-direction:column; border-top:6px solid {brand_color}; box-sizing: border-box;">
+                    <div style="font-size:9px; font-weight:bold; color:{f_c}; padding:3px;">{u.faza}</div>
+                    <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
+                        <div style="font-size:16px; font-weight:900; color:#d35400; line-height:1;">{u.charakterystyka}{u.prad}</div>
+                        <div style="font-size:9px; color:#555; margin-top:2px;">{u.przekroj}</div>
+                    </div>
+                    <div style="border-top:1px solid #ddd; padding:2px; height:40px; font-size:8px; font-weight:bold; display:flex; align-items:center; justify-content:center; background:#f9f9f9; overflow:hidden;">{u.opis}</div>
+                    <div style="background:#1a252f; color:#f1c40f; font-size:8px; padding:3px;">{u.moduly}M</div>
+                </div>"""
+            html_szyny_print += '</div>'
+
     html_content = f"""
     <!DOCTYPE html>
     <html lang="pl">
@@ -278,12 +271,15 @@ if st.session_state['szyna']:
         <title>Dokumentacja - {klient}</title>
         <style>
             body {{ font-family: sans-serif; padding: 20px; color: #000; background: #fff; }}
-            h1, h2 {{ text-align: center; }}
+            h1, h2 {{ text-align: center; margin-top: 30px; }}
             table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
-            th, td {{ border: 1px solid #000; padding: 8px; text-align: left; }}
+            th, td {{ border: 1px solid #000; padding: 8px; text-align: left; font-size: 14px; }}
             .page-break {{ page-break-before: always; }}
-            .schemat {{ font-family: monospace; white-space: pre; line-height: 1.3; font-size: 14px; border: 1px solid #000; padding: 15px; background-color: #fdfdfd; }}
+            .schemat {{ font-family: monospace; white-space: pre; line-height: 1.3; font-size: 14px; border: 1px solid #000; padding: 15px; background-color: #fdfdfd; margin-top: 20px; }}
             .header {{ text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; font-size: 20px; }}
+            @media print {{
+                @page {{ size: A4 portrait; margin: 10mm; }}
+            }}
         </style>
     </head>
     <body>
@@ -292,12 +288,15 @@ if st.session_state['szyna']:
             <span style="font-size:14px; font-weight:normal;">Inwestor: {klient} | Lokalizacja: {miejsce} | Data: {datetime.now().strftime('%d.%m.%Y')}</span>
         </div>
         
-        <h2>1. Specyfikacja techniczna obwodów</h2>
+        {html_szyny_print}
+        
+        <div class="page-break"></div>
+        
+        <h2>2. Specyfikacja techniczna obwodów</h2>
         <table>
             <tr><th>Nr</th><th>Aparat</th><th>Faza</th><th>Przewód</th><th>Opis</th></tr>
     """
     
-    # Dodawanie wierszy do tabeli
     for i, u in enumerate(st.session_state['szyna']):
         html_content += f"<tr><td>{i+1}</td><td>{u.charakterystyka}{u.prad}</td><td>{u.faza}</td><td>{u.przekroj}</td><td>{u.opis}</td></tr>"
         
@@ -306,26 +305,24 @@ if st.session_state['szyna']:
         
         <div class="page-break"></div>
         
-        <h2>2. Schemat jednokreskowy ideowy</h2>
+        <h2>3. Schemat jednokreskowy ideowy</h2>
         <div class="schemat">
     """
     
-    # Generowanie schematu
-    html_content += "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\n┃\n"
+    html_content += "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\\n┃\\n"
     glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
     obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
     
     for u in glowny:
         pref = "Q" if u.charakterystyka == "FR" else "F"
-        html_content += f"┣━[ {pref}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny\n┃\n"
+        html_content += f"┣━[ {pref}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny\\n┃\\n"
     
-    html_content += "┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3\n"
+    html_content += "┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3\\n"
     for u in obwody:
         sym = "—[—" if u.moduly == 1 else "—[≡—"
-        html_content += f"┃    ┣━({u.faza})━{sym} {u.charakterystyka}{u.prad} ]——— {u.przekroj} ———> {u.opis}\n"
-    html_content += "┃    ▼\n⚡ REZERWA"
+        html_content += f"┃    ┣━({u.faza})━{sym} {u.charakterystyka}{u.prad} ]——— {u.przekroj} ———> {u.opis}\\n"
+    html_content += "┃    ▼\\n⚡ REZERWA"
     
-    # Zamknięcie dokumentu
     html_content += f"""
         </div>
         <div style="text-align: right; font-size: 10px; margin-top: 30px;">
@@ -335,7 +332,6 @@ if st.session_state['szyna']:
     </html>
     """
     
-    # Generowanie linku pobierania
     b64 = base64.b64encode(html_content.encode('utf-8')).decode()
-    href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" download="Dokumentacja_{klient.replace(" ", "_")}.html" style="display: block; text-align: center; padding: 10px; background-color: #005EB8; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">📥 POBIERZ PLIK DO DRUKU</a>'
+    href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" download="Dokumentacja_{klient.replace(" ", "_")}.html" style="display: block; text-align: center; padding: 10px; background-color: #005EB8; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin-bottom: 20px;">📥 POBIERZ PLIK DO DRUKU</a>'
     st.sidebar.markdown(href, unsafe_allow_html=True)
