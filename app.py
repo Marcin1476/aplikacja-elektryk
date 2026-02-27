@@ -54,11 +54,9 @@ st.markdown("""
         .header-box { border: 2px solid black !important; }
         .header-top { background-color: #f2f2f2 !important; color: black !important; border-bottom: 2px solid black; }
         
-        /* WYMUSZENIE WIELU STRON */
         .print-page-break {
             page-break-before: always !important;
             display: block !important;
-            height: 0;
         }
         
         .copyright-footer {
@@ -206,7 +204,6 @@ if st.session_state['szyna']:
     st.markdown('<div class="print-page-break"></div>', unsafe_allow_html=True)
     st.header("3. Schemat jednokreskowy ideowy")
     
-    # Tworzenie schematu z jawnymi znakami nowej linii
     sch_lines = ["ZASILANIE: Sieć TN-S 3x230/400V 50Hz", "┃"]
     glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
     obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
@@ -225,11 +222,6 @@ if st.session_state['szyna']:
     
     sch_final = "\n".join(sch_lines)
     st.markdown(f'<div class="schemat-box">{sch_final}</div>', unsafe_allow_html=True)
-    
-    
-
-[Image of an electrical switchboard single line diagram]
-
 
     st.sidebar.divider()
     if st.sidebar.button("🖨️ DRUKUJ CAŁOŚĆ", use_container_width=True):
