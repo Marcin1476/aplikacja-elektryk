@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # --- KONFIGURACJA STRONY ---
-st.set_page_config(page_title="Asystent Elektryka Fundament v2.5.1", layout="wide")
+st.set_page_config(page_title="Asystent Elektryka Fundament v2.5.2", layout="wide")
 
 # --- INICJALIZACJA SESJI ---
 if 'szyna' not in st.session_state:
@@ -47,9 +47,6 @@ class Urzadzenie:
         self.opis = opis
         self.zs = zs  
         self.rcd_group = rcd_group
-        
-    def get_ik(self):
-        return round(U_N / self.zs, 2) if self.zs > 0 else 0
 
 # --- BIBLIOTEKA ---
 BIBLIOTEKA = [
@@ -63,7 +60,7 @@ BIBLIOTEKA = [
 ]
 
 # --- SIDEBAR ---
-st.sidebar.title("🛠️ Projektant v2.5.1")
+st.sidebar.title("🛠️ Projektant v2.5.2")
 wybrany_producent = st.sidebar.selectbox("Producent osprzętu:", list(PRODUCENCI.keys()))
 kolor_brandu = PRODUCENCI[wybrany_producent]
 
@@ -76,9 +73,9 @@ with st.sidebar.expander("Parametry dodatkowe", expanded=True):
     faz = st.sidebar.radio("Zasilanie:", ["L1", "L2", "L3"]) if BIBLIOTEKA[idx]['m'] < 3 else "L123"
     zs_val = st.sidebar.number_input("Impedancja Zs [Ω]:", min_value=0.0, max_value=10.0, value=0.0, step=0.01)
     
-    # Bezpieczne szukanie RCD dla grup
-    dostepne_rcd = ["Brak"] + [f"RCD {i+1}" for i, u in enumerate(st.session_state['szyna']) if "RCCB" in getattr(u, 'charakterystyka', '')]
-    grupa_rcd = st.sidebar.selectbox("Przypisz do RCD:", dostepne_rcd)
+    # Szukanie dostępnych RCD w sesji
+    lista_rcd = ["Brak"] + [f"RCD {i+1}" for i, u in enumerate(st.session_state['szyna']) if "RCCB" in getattr(u, 'charakterystyka', '')]
+    grupa_rcd = st.sidebar.selectbox("Przypisz do RCD:", lista_rcd)
 
 if st.sidebar.button("Dodaj ➡️"):
     b = BIBLIOTEKA[idx]
@@ -86,19 +83,26 @@ if st.sidebar.button("Dodaj ➡️"):
     st.session_state['szyna'].append(nowe)
     st.rerun()
 
+if st.sidebar.button("Usuń ostatni ⬅️"):
+    if st.session_state['szyna']:
+        st.session_state['szyna'].pop()
+        st.rerun()
+
 if st.sidebar.button("Resetuj projekt 🗑️"):
     st.session_state['szyna'] = []
     st.rerun()
 
-# --- LOGIKA RZĘDÓW ---
+# --- LOGIKA PODZIAŁU NA RZĘDY ---
 rzedy = [[]]
 akt_mod = 0
 for u in st.session_state['szyna']:
-    mod_val = getattr(u, 'moduly', 1)
-    if akt_mod + mod_val > RZAD_MAX_MOD:
-        rzedy.append([u]); akt_mod = mod_val
+    u_mod = getattr(u, 'moduly', 1)
+    if akt_mod + u_mod > RZAD_MAX_MOD:
+        rzedy.append([u])
+        akt_mod = u_mod
     else:
-        rzedy[-1].append(u); akt_mod += mod_val
+        rzedy[-1].append(u)
+        akt_mod += u_mod
 
 # --- WIZUALIZACJA ---
 st.title("⚡ Projekt Rozdzielnicy")
@@ -106,54 +110,57 @@ st.title("⚡ Projekt Rozdzielnicy")
 
 st.markdown('<div class="obudowa">', unsafe_allow_html=True)
 for r_i, rzad in enumerate(rzedy):
-    if not rzad: continue
-    st.write(f"🏷️ **SZYNIA DIN #{r_i + 1}**")
-    html = '<div class="szyna-din">'
-    for i, u in enumerate(rzad):
-        # Bezpieczne pobieranie atrybutów
-        u_faza = getattr(u, 'faza', 'L1')
-        u_zs = getattr(u, 'zs', 0.0)
-        u_rcd = getattr(u, 'rcd_group', 'Brak')
-        u_char = getattr(u, 'charakterystyka', '-')
-        u_prad = getattr(u, 'prad', '-')
-        u_nazwa = getattr(u, 'nazwa', '-')
-        u_opis = getattr(u, 'opis', '-')
-        u_mod = getattr(u, 'moduly', 1)
-
-        ico = {"L1": "🔴", "L2": "⚫", "L3": "⚪", "L123": "🌈"}.get(u_faza, "➖")
-        ik_val = round(U_N / u_zs, 2) if u_zs > 0 else 0
-        ik_display = f'<div class="short-circuit">Ik: {ik_val} A</div>' if u_zs > 0 else ""
-        rcd_display = f'<div style="font-size:8px; color:#27ae60; font-weight:bold;">Grp: {u_rcd}</div>' if u_rcd != "Brak" else ""
+    if not rzad and len(st.session_state['szyna']) == 0:
+        st.info("Szafa jest pusta. Dodaj aparaty z panelu bocznego.")
+        break
+    
+    if rzad:
+        st.write(f"🏷️ **SZYNIA DIN #{r_i + 1}**")
+        html_szyny = '<div class="szyna-din">'
         
-        html += f"""
-        <div class="aparat" style="width:{u_mod*65}px; border-top: 15px solid {kolor_brandu};">
-            <div class="aparat-brand" style="background-color:{kolor_brandu};">{wybrany_producent}</div>
-            <div class="aparat-faza">{ico} {u_faza}</div>
-            <div class="aparat-body">
-                <div style="font-size:9px; font-weight:bold;">{u_nazwa}</div>
-                <div style="margin:5px 0;"><span style="font-size:12px; font-weight:bold;">{u_char}</span><span class="amp-text">{u_prad}A</span></div>
-                {ik_display} {rcd_display}
-                <div class="aparat-label">{u_opis}</div>
-            </div>
-            <div class="aparat-footer">{"■"*u_mod}<br>{u_mod} MOD</div>
-        </div>"""
-    html += '</div>'
-    st.markdown(html, unsafe_allow_html=True)
+        for i, u in enumerate(rzad):
+            # Bezpieczne dane
+            u_faza = getattr(u, 'faza', 'L1')
+            u_zs = getattr(u, 'zs', 0.0)
+            u_rcd = getattr(u, 'rcd_group', 'Brak')
+            
+            ico = {"L1": "🔴", "L2": "⚫", "L3": "⚪", "L123": "🌈"}.get(u_faza, "➖")
+            ik_val = round(U_N / u_zs, 2) if u_zs > 0 else 0
+            ik_html = f'<div class="short-circuit">Ik: {ik_val} A</div>' if u_zs > 0 else ""
+            rcd_html = f'<div style="font-size:8px; color:#27ae60; font-weight:bold;">Grp: {u_rcd}</div>' if u_rcd != "Brak" else ""
+            
+            # Składanie HTML dla pojedynczego aparatu
+            html_szyny += f"""
+            <div class="aparat" style="width:{u.moduly*65}px; border-top: 15px solid {kolor_brandu};">
+                <div class="aparat-brand" style="background-color:{kolor_brandu};">{wybrany_producent}</div>
+                <div class="aparat-faza">{ico} {u_faza}</div>
+                <div class="aparat-body">
+                    <div style="font-size:9px; font-weight:bold;">{u.nazwa}</div>
+                    <div style="margin:5px 0;"><span style="font-size:12px; font-weight:bold;">{u.charakterystyka}</span><span class="amp-text">{u.prad}A</span></div>
+                    {ik_html} {rcd_html}
+                    <div class="aparat-label">{u.opis}</div>
+                </div>
+                <div class="aparat-footer">{"■"*u.moduly}<br>{u.moduly} MOD</div>
+            </div>"""
+        
+        html_szyny += '</div>'
+        st.markdown(html_szyny, unsafe_allow_html=True)
+
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- TABELA ---
+# --- TABELA ANALIZY ---
 st.divider()
 if st.session_state['szyna']:
-    st.subheader("📋 Analiza Techniczna")
+    st.subheader("📋 Zestawienie Techniczne")
     df_data = []
     for i, u in enumerate(st.session_state['szyna']):
         u_zs = getattr(u, 'zs', 0.0)
         df_data.append({
             "Aparat": f"F{i+1}",
-            "Typ": f"{getattr(u,'charakterystyka','-')}{getattr(u,'prad','-')}A",
+            "Typ": f"{u.charakterystyka}{u.prad}A",
             "Zs [Ω]": u_zs,
             "Ik [A]": round(U_N / u_zs, 2) if u_zs > 0 else 0,
             "Grupa RCD": getattr(u, 'rcd_group', 'Brak'),
-            "Opis": getattr(u, 'opis', '-')
+            "Opis": u.opis
         })
     st.table(pd.DataFrame(df_data))
