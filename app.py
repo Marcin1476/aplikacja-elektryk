@@ -46,30 +46,24 @@ st.markdown("""
     }
 
     @media print {
-        /* KLUCZOWE: Resetowanie kontenerów Streamlit, aby umożliwić podział stron */
         .main, .block-container, .stApp {
             display: block !important;
             height: auto !important;
             overflow: visible !important;
         }
-        
         section[data-testid="stSidebar"], .stButton, header, footer, [data-testid="stDecoration"], .no-print {
             display: none !important;
         }
-
-        /* WYMUSZENIE PODZIAŁU STRON */
-        .page-break {
+        .print-page-break {
             display: block !important;
             page-break-before: always !important;
             break-before: page !important;
             height: 0px !important;
         }
-
         .obudowa { background-color: white !important; border: 2px solid black !important; }
         .szyna-din { background-color: #f9f9f9 !important; border: 1px solid #000 !important; page-break-inside: avoid; }
         .header-box { border: 2px solid black !important; }
         .header-top { background-color: #f2f2f2 !important; color: black !important; border-bottom: 2px solid black; }
-        
         .copyright-footer {
             position: fixed;
             bottom: 5mm;
@@ -198,8 +192,7 @@ for r_i, rzad in enumerate(rzedy):
 st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state['szyna']:
-    # --- STRONA 2: SPECYFIKACJA ---
-    st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="print-page-break"></div>', unsafe_allow_html=True)
     st.header("1. Specyfikacja techniczna obwodów")
     df = pd.DataFrame([{
         "Nr": i+1, "Aparat": f"{u.charakterystyka}{u.prad}", "Faza": u.faza,
@@ -213,14 +206,8 @@ if st.session_state['szyna']:
     df_bom.columns = ['Element instalacji', 'Ilość [szt]']
     st.table(df_bom)
 
-    # --- STRONA 3: SCHEMAT ---
-    st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="print-page-break"></div>', unsafe_allow_html=True)
     st.header("3. Schemat jednokreskowy ideowy")
-    
-    
-
-[Image of electrical switchboard single line diagram]
-
     
     sch_lines = ["ZASILANIE: Sieć TN-S 3x230/400V 50Hz", "┃"]
     glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
