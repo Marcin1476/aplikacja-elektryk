@@ -13,12 +13,10 @@ if 'next_faza_idx' not in st.session_state:
 # --- 2. STYLE CSS (OPTYMALIZACJA POD DRUK ZBIORCZY A4) ---
 st.markdown("""
     <style>
-    /* Widok ekranowy */
     .obudowa { background-color: #333; padding: 25px; border-radius: 12px; }
-    .szyna-din { display: flex; flex-direction: row; background-color: #b0b0b0; padding: 25px 5px; border-top: 10px solid #777; border-bottom: 10px solid #777; gap: 4px; margin-bottom: 15px; }
+    .szyna-din { display: flex; flex-direction: row; background-color: #b0b0b0; padding: 25px 5px; border-top: 10px solid #777; border-bottom: 10px solid #777; gap: 4px; margin-bottom: 15px; overflow-x: auto; }
     .schemat-box { font-family: 'Courier New', monospace; border: 1px solid #333; padding: 20px; background: #fdfdfd; line-height: 1.2; overflow-x: auto; }
 
-    /* STYLE WYDRUKU */
     @media print {
         section[data-testid="stSidebar"], .stButton, header, footer, [data-testid="stDecoration"], .no-print {
             display: none !important;
@@ -62,7 +60,7 @@ BIBL = [
     {"n": "Wyłącznik 1P", "c": "B", "p": "16", "m": 1},
     {"n": "Wyłącznik 1P", "c": "B", "p": "10", "m": 1}
 ]
-sel = st.sidebar.selectbox("Wybierz aparat:", range(len(BIBL)), format_func=lambda x: f"{BIBL[x]['n']} {BIBL[x]['c']}")
+sel = st.sidebar.selectbox("Wybierz aparat:", range(len(BIBL)), format_func=lambda x: f"{BIBL[sel]['n']} {BIBL[sel]['c']}")
 etyk = st.sidebar.text_input("Opis obwodu:", "Gniazda Salon")
 
 if st.sidebar.button("DODAJ APARAT ➡️", use_container_width=True):
@@ -113,19 +111,15 @@ st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
 st.subheader("2. Schemat jednokreskowy ideowy")
 
 if st.session_state['szyna']:
-    sch = "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\n"
-    sch += "┃\n"
+    sch = "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\\n┃\\n"
     fr = next((u for u in st.session_state['szyna'] if u.charakterystyka == "FR"), None)
     spd = next((u for u in st.session_state['szyna'] if u.charakterystyka == "SPD"), None)
-    
-    if fr: sch += f"┣━[ Q1: {fr.charakterystyka} {fr.prad}A ] Rozłącznik Główny\n┃\n"
-    if spd: sch += f"┣━[ F1: {spd.charakterystyka} ] Ogranicznik Przepięć\n┃\n"
-    
-    sch += "┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3\n"
+    if fr: sch += f"┣━[ Q1: {fr.charakterystyka} {fr.prad}A ] Rozłącznik Główny\\n┃\\n"
+    if spd: sch += f"┣━[ F1: {spd.charakterystyka} ] Ogranicznik Przepięć\\n┃\\n"
+    sch += "┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3\\n"
     for u in st.session_state['szyna']:
         if u.charakterystyka not in ["FR", "SPD"]:
-            sch += f"┃    ┣━({u.faza})━[ {u.charakterystyka}{u.prad} ]─── {u.przekroj} ───> {u.opis}\n"
-    
+            sch += f"┃    ┣━({u.faza})━[ {u.charakterystyka}{u.prad} ]─── {u.przekroj} ───> {u.opis}\\n"
     st.markdown(f'<div class="schemat-box"><pre style="font-size:14px;">{sch}</pre></div>', unsafe_allow_html=True)
 
 # --- 8. SPECYFIKACJA I MATERIAŁY ---
@@ -136,7 +130,6 @@ with c1:
     if st.session_state['szyna']:
         df = pd.DataFrame([{"Faza": u.faza, "Zabezp.": f"{u.charakterystyka}{u.prad}", "Przewód": u.przekroj, "Opis": u.opis} for u in st.session_state['szyna']])
         st.table(df)
-
 with c2:
     st.subheader("4. Zestawienie materiałowe")
     if st.session_state['szyna']:
