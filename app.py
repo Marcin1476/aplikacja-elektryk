@@ -44,20 +44,33 @@ st.markdown("""
         line-height: 1.2 !important;
         margin-top: 20px;
     }
+
     @media print {
+        /* KLUCZ: Ukrywamy zbędne kontenery Streamlit, które blokują page-break */
         section[data-testid="stSidebar"], .stButton, header, footer, [data-testid="stDecoration"], .no-print {
             display: none !important;
         }
-        .main .block-container { padding-top: 5mm !important; }
+        
+        /* Resetujemy kontenery nadrzędne */
+        .main .block-container { 
+            padding-top: 10mm !important; 
+            max-width: 100% !important;
+        }
+
+        /* WYMUSZENIE PODZIAŁU STRON */
+        .print-page-break {
+            display: block !important;
+            page-break-before: always !important;
+            break-before: page !important;
+            height: 0px;
+            margin: 0;
+            border: none;
+        }
+
         .obudowa { background-color: white !important; border: 2px solid black !important; }
         .szyna-din { background-color: #f9f9f9 !important; border: 1px solid #000 !important; page-break-inside: avoid; }
         .header-box { border: 2px solid black !important; }
         .header-top { background-color: #f2f2f2 !important; color: black !important; border-bottom: 2px solid black; }
-        
-        .print-page-break {
-            page-break-before: always !important;
-            display: block !important;
-        }
         
         .copyright-footer {
             position: fixed;
@@ -187,6 +200,7 @@ for r_i, rzad in enumerate(rzedy):
 st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state['szyna']:
+    # --- STRONA 2: TABELE ---
     st.markdown('<div class="print-page-break"></div>', unsafe_allow_html=True)
     st.header("1. Specyfikacja techniczna obwodów")
     df = pd.DataFrame([{
@@ -201,18 +215,17 @@ if st.session_state['szyna']:
     df_bom.columns = ['Element instalacji', 'Ilość [szt]']
     st.table(df_bom)
 
+    # --- STRONA 3: SCHEMAT ---
     st.markdown('<div class="print-page-break"></div>', unsafe_allow_html=True)
     st.header("3. Schemat jednokreskowy ideowy")
     
     sch_lines = ["ZASILANIE: Sieć TN-S 3x230/400V 50Hz", "┃"]
     glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
     obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
-    
     for u in glowny:
         pref = "Q" if u.charakterystyka == "FR" else "F"
         sch_lines.append(f"┣━[ {pref}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny")
         sch_lines.append("┃")
-    
     sch_lines.append("┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3")
     for u in obwody:
         sym = "—[—" if u.moduly == 1 else "—[≡—"
