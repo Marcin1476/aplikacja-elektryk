@@ -26,13 +26,11 @@ st.markdown("""
         .main .block-container { padding: 10mm !important; }
         .obudowa { background-color: white !important; border: 1px solid black !important; }
         .szyna-din { background-color: #f9f9f9 !important; border: 1px solid #000 !important; page-break-inside: avoid; }
-        .schemat-box { border: 2px solid black !important; page-break-before: always; } /* Schemat zawsze od nowej strony */
+        .schemat-box { border: 2px solid black !important; page-break-before: always; }
         .page-break { page-break-before: always; }
         table { width: 100% !important; page-break-inside: auto; }
         tr { page-break-inside: avoid; }
-        .print-only { display: block !important; }
     }
-    .print-only { display: none; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -89,7 +87,7 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# --- 6. SEKCJE (WIZUALIZACJA I SCHEMAT) ---
+# --- 6. SEKCJE (WIZUALIZACJA) ---
 st.subheader("1. Widok montażowy (Rozmieszczenie aparatów)")
 rzedy = [[]]; akt_m = 0
 for u in st.session_state['szyna']:
@@ -115,7 +113,6 @@ st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
 st.subheader("2. Schemat jednokreskowy ideowy")
 
 if st.session_state['szyna']:
-    # Budowa logiczna schematu
     sch = "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\n"
     sch += "┃\n"
     fr = next((u for u in st.session_state['szyna'] if u.charakterystyka == "FR"), None)
@@ -130,10 +127,6 @@ if st.session_state['szyna']:
             sch += f"┃    ┣━({u.faza})━[ {u.charakterystyka}{u.prad} ]─── {u.przekroj} ───> {u.opis}\n"
     
     st.markdown(f'<div class="schemat-box"><pre style="font-size:14px;">{sch}</pre></div>', unsafe_allow_html=True)
-    
-
-[Image of an electrical switchboard single line diagram]
-
 
 # --- 8. SPECYFIKACJA I MATERIAŁY ---
 st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
