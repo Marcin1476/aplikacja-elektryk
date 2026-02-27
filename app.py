@@ -34,7 +34,15 @@ st.markdown("""
         letter-spacing: 2px;
     }
     .schemat-box {
-        font-family: monospace; border: 2px solid #000; padding: 20px; background-color: #fdfdfd; overflow-x: auto; display: block !important;
+        font-family: 'Courier New', Courier, monospace;
+        border: 2px solid #000;
+        padding: 20px;
+        background-color: #ffffff !important;
+        color: #000 !important;
+        white-space: pre !important;
+        display: block !important;
+        line-height: 1.2 !important;
+        margin-top: 20px;
     }
     @media print {
         section[data-testid="stSidebar"], .stButton, header, footer, [data-testid="stDecoration"], .no-print {
@@ -45,6 +53,14 @@ st.markdown("""
         .szyna-din { background-color: #f9f9f9 !important; border: 1px solid #000 !important; page-break-inside: avoid; }
         .header-box { border: 2px solid black !important; }
         .header-top { background-color: #f2f2f2 !important; color: black !important; border-bottom: 2px solid black; }
+        
+        /* WYMUSZENIE WIELU STRON */
+        .print-page-break {
+            page-break-before: always !important;
+            display: block !important;
+            height: 0;
+        }
+        
         .copyright-footer {
             position: fixed;
             bottom: 5mm;
@@ -53,8 +69,6 @@ st.markdown("""
             color: #333;
             display: block !important;
         }
-        .page-break { page-break-before: always !important; display: block; }
-        .schemat-box { display: block !important; page-break-inside: avoid; }
     }
     .copyright-screen {
         text-align: right; font-size: 12px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;
@@ -175,7 +189,7 @@ for r_i, rzad in enumerate(rzedy):
 st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state['szyna']:
-    st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="print-page-break"></div>', unsafe_allow_html=True)
     st.header("1. Specyfikacja techniczna obwodów")
     df = pd.DataFrame([{
         "Nr": i+1, "Aparat": f"{u.charakterystyka}{u.prad}", "Faza": u.faza,
@@ -189,22 +203,33 @@ if st.session_state['szyna']:
     df_bom.columns = ['Element instalacji', 'Ilość [szt]']
     st.table(df_bom)
 
-    st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="print-page-break"></div>', unsafe_allow_html=True)
     st.header("3. Schemat jednokreskowy ideowy")
     
-    sch = "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\n┃\n"
+    # Tworzenie schematu z jawnymi znakami nowej linii
+    sch_lines = ["ZASILANIE: Sieć TN-S 3x230/400V 50Hz", "┃"]
     glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
     obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
+    
     for u in glowny:
         pref = "Q" if u.charakterystyka == "FR" else "F"
-        sch += f"┣━[ {pref}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny\n┃\n"
-    sch += "┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3\n"
+        sch_lines.append(f"┣━[ {pref}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny")
+        sch_lines.append("┃")
+    
+    sch_lines.append("┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3")
     for u in obwody:
         sym = "—[—" if u.moduly == 1 else "—[≡—"
-        sch += f"┃    ┣━({u.faza})━{sym} {u.charakterystyka}{u.prad} ]——— {u.przekroj} ———> {u.opis}\n"
-    sch += "┃    ▼\n⚡ REZERWA"
+        sch_lines.append(f"┃    ┣━({u.faza})━{sym} {u.charakterystyka}{u.prad} ]——— {u.przekroj} ———> {u.opis}")
+    sch_lines.append("┃    ▼")
+    sch_lines.append("⚡ REZERWA")
     
-    st.markdown(f'<div class="schemat-box"><pre style="font-size:14px; line-height:1.2; margin:0;">{sch}</pre></div>', unsafe_allow_html=True)
+    sch_final = "\n".join(sch_lines)
+    st.markdown(f'<div class="schemat-box">{sch_final}</div>', unsafe_allow_html=True)
+    
+    
+
+[Image of an electrical switchboard single line diagram]
+
 
     st.sidebar.divider()
     if st.sidebar.button("🖨️ DRUKUJ CAŁOŚĆ", use_container_width=True):
