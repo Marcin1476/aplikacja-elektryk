@@ -1,14 +1,13 @@
 import streamlit as st
 import pandas as pd
 
-# --- 1. KONFIGURACJA STRONY (Musi być pierwsza!) ---
-st.set_page_config(page_title="Asystent Elektryka Pro v2.1", layout="wide")
+# --- KONFIGURACJA STRONY ---
+st.set_page_config(page_title="Asystent Elektryka Pro v2.2", layout="wide")
 
-# --- 2. BEZPIECZNA INICJALIZACJA SESJI ---
 if 'szyna' not in st.session_state:
     st.session_state['szyna'] = []
 
-# --- 3. PARAMETRY I STYLE ---
+# --- PARAMETRY ---
 RZAD_MAX_MOD = 12 
 PRODUCENCI = {"Eaton": "#005EB8", "Legrand": "#E20613", "Schneider": "#3dcd58", "Hager": "#00305d"}
 DOBOR_PRZEWODU = {
@@ -17,6 +16,7 @@ DOBOR_PRZEWODU = {
     "32": "6.0 mm²", "40": "10.0 mm²", "63": "16.0 mm²"
 }
 
+# --- CSS (Wizualizacja) ---
 st.markdown("""
     <style>
     .obudowa { background-color: #444; padding: 25px; border-radius: 12px; border: 6px solid #222; }
@@ -39,7 +39,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. MODELE DANYCH ---
 class Urzadzenie:
     def __init__(self, nazwa, charakterystyka, prad, moduly, faza, opis=""):
         self.nazwa = nazwa
@@ -50,7 +49,7 @@ class Urzadzenie:
         self.opis = opis
         self.przewod = DOBOR_PRZEWODU.get(prad, "wg projektu")
 
-# --- 5. BIBLIOTEKA ---
+# --- BIBLIOTEKA ---
 BIBLIOTEKA = [
     Urzadzenie("Rozłącznik Główny 3P", "FR", "100", 3, "L123"),
     Urzadzenie("Ochronnik T1+T2", "SPD", "B+C", 4, "L123"),
@@ -58,33 +57,28 @@ BIBLIOTEKA = [
     Urzadzenie("Różnicówka 2P 30mA", "RCCB", "25", 2, "L1"),
     Urzadzenie("Wyłącznik 1P", "B", "10", 1, "L1"),
     Urzadzenie("Wyłącznik 1P", "B", "16", 1, "L1"),
-    Urzadzenie("Wyłącznik 1P", "C", "20", 1, "L1"),
     Urzadzenie("Wyłącznik 3P", "B", "16", 3, "L123"),
-    Urzadzenie("Wyłącznik 3P", "C", "25", 3, "L123"),
 ]
 
-# --- 6. PANEL BOCZNY ---
-st.sidebar.title("🛠️ Kreator Rozdzielnicy")
-prod = st.sidebar.selectbox("Marka osprzętu:", list(PRODUCENCI.keys()))
+# --- SIDEBAR ---
+st.sidebar.title("🛠️ Kreator Projektu")
+prod = st.sidebar.selectbox("Marka:", list(PRODUCENCI.keys()))
 brand_color = PRODUCENCI[prod]
 
 opcje_tekst = [f"{u.charakterystyka}{u.prad} | {u.nazwa}" for u in BIBLIOTEKA]
-idx = st.sidebar.selectbox("Wybierz aparat:", range(len(BIBLIOTEKA)), format_func=lambda x: opcje_tekst[x])
-etyk = st.sidebar.text_input("Nazwa obwodu:", "Obwód")
-faz = st.sidebar.radio("Zasilanie (1P):", ["L1", "L2", "L3"]) if BIBLIOTEKA[idx].moduly < 3 else "L123"
+idx = st.sidebar.selectbox("Dodaj aparat:", range(len(BIBLIOTEKA)), format_func=lambda x: opcje_tekst[x])
+etyk = st.sidebar.text_input("Nazwa obwodu:", "Gniazda")
+faz = st.sidebar.radio("Zasilanie:", ["L1", "L2", "L3"]) if BIBLIOTEKA[idx].moduly < 3 else "L123"
 
 if st.sidebar.button("Dodaj do szafy ➡️"):
     b = BIBLIOTEKA[idx]
     st.session_state['szyna'].append(Urzadzenie(b.nazwa, b.charakterystyka, b.prad, b.moduly, faz, etyk))
     st.rerun()
 
-if st.sidebar.button("Usuń ostatni ⬅️"):
-    if st.session_state['szyna']: st.session_state['szyna'].pop(); st.rerun()
-
-if st.sidebar.button("Resetuj szafę 🗑️"):
+if st.sidebar.button("Resetuj 🗑️"):
     st.session_state['szyna'] = []; st.rerun()
 
-# --- 7. LOGIKA PODZIAŁU ---
+# --- LOGIKA PODZIAŁU NA RZĘDY ---
 rzedy = [[]]
 akt_mod = 0
 for u in st.session_state['szyna']:
@@ -95,15 +89,12 @@ for u in st.session_state['szyna']:
         rzedy[-1].append(u)
         akt_mod += u.moduly
 
-# --- 8. WIZUALIZACJA ---
-st.title("⚡ Projekt Rozdzielnicy Wielorzędowej")
-
-
-
+# --- WIZUALIZACJA ---
+st.title("⚡ Projekt Rozdzielnicy")
 st.markdown('<div class="obudowa">', unsafe_allow_html=True)
 for r_i, rzad in enumerate(rzedy):
     if not rzad and r_i == 0:
-        st.info("Szafa jest pusta. Dodaj aparaty z panelu bocznego.")
+        st.info("Dodaj urządzenia, aby zobaczyć wizualizację.")
         break
     st.write(f"🏷️ **SZYNIA DIN #{r_i + 1}**")
     html = '<div class="szyna-din">'
@@ -124,16 +115,27 @@ for r_i, rzad in enumerate(rzedy):
     st.markdown(html, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 9. RAPORT ---
+# --- SPECYFIKACJA PODZIELONA NA RZĘDY ---
 st.divider()
 if st.session_state['szyna']:
-    st.subheader("📋 Specyfikacja techniczna")
-    df = pd.DataFrame([{
-        "Lokalizacja": f"Rząd {i//RZAD_MAX_MOD + 1}",
-        "Aparat": u.nazwa,
-        "Parametry": f"{u.charakterystyka}{u.prad}A",
-        "Przewód": u.przewod,
-        "Faza": u.faza,
-        "Opis": u.opis
-    } for i, u in enumerate(st.session_state['szyna'])])
-    st.dataframe(df, use_container_width=True)
+    st.subheader("📋 Specyfikacja techniczna (podział na szyny)")
+    
+    # Przechodzimy przez rzędy, aby stworzyć eleganckie zestawienie
+    for r_idx, rzad in enumerate(rzedy):
+        if rzad:
+            st.write(f"**Szyna DIN nr {r_idx + 1}**")
+            dane_rzedu = [{
+                "Nr": f"A{i+1}",
+                "Aparat": u.nazwa,
+                "Zabezpieczenie": f"{u.charakterystyka}{u.prad}A",
+                "Faza": u.faza,
+                "Przewód": u.przewod,
+                "Przeznaczenie": u.opis
+            } for i, u in enumerate(rzad)]
+            
+            st.table(pd.DataFrame(dane_rzedu))
+            
+            suma_m = sum(u.moduly for u in rzad)
+            st.caption(f"Zajętość na szynie: {suma_m}/{RZAD_MAX_MOD} modułów")
+else:
+    st.info("Specyfikacja pojawi się po dodaniu aparatów.")
