@@ -326,23 +326,31 @@ if st.session_state['szyna']:
     svg = f'<div style="text-align: left; margin-top: 20px; border: 2px solid #000; background-color: #fafafa; padding-bottom: 20px; overflow-x: auto;">'
     svg += f'<svg width="{svg_width}" height="{svg_height}" xmlns="http://www.w3.org/2000/svg" style="font-family: sans-serif;">'
     
-    svg += f'<line x1="100" y1="50" x2="{svg_width-20}" y2="50" stroke="#000" stroke-width="2"/>'
-    svg += f'<text x="105" y="45" font-size="11" font-weight="bold" font-family="sans-serif">L1L2L3</text>'
+    svg += f'<line x1="100" y1="30" x2="{svg_width-20}" y2="30" stroke="#000" stroke-width="1.5"/>'
+    svg += f'<text x="105" y="25" font-size="10" font-weight="bold" font-family="sans-serif">L1</text>'
     
-    svg += f'<line x1="80" y1="190" x2="{svg_width-20}" y2="190" stroke="#000" stroke-width="1.2" stroke-dasharray="2,2"/>'
-    svg += f'<text x="105" y="185" font-size="10" font-family="sans-serif">N1</text>'
+    svg += f'<line x1="100" y1="40" x2="{svg_width-20}" y2="40" stroke="#000" stroke-width="1.5"/>'
+    svg += f'<text x="105" y="35" font-size="10" font-weight="bold" font-family="sans-serif">L2</text>'
     
-    svg += f'<line x1="80" y1="210" x2="{svg_width-20}" y2="210" stroke="#000" stroke-width="1.2" stroke-dasharray="6,3,2,3"/>'
+    svg += f'<line x1="100" y1="50" x2="{svg_width-20}" y2="50" stroke="#000" stroke-width="1.5"/>'
+    svg += f'<text x="105" y="45" font-size="10" font-weight="bold" font-family="sans-serif">L3</text>'
     
-    svg += f'<line x1="60" y1="280" x2="60" y2="20" stroke="#000" stroke-width="1.5"/>'
-    svg += f'<line x1="60" y1="20" x2="100" y2="20" stroke="#000" stroke-width="1.5"/>'
-    svg += f'<line x1="100" y1="20" x2="100" y2="50" stroke="#000" stroke-width="1.5"/>'
+    svg += f'<line x1="80" y1="190" x2="{svg_width-20}" y2="190" stroke="#2980b9" stroke-width="1.2" stroke-dasharray="2,2"/>'
+    svg += f'<text x="105" y="185" font-size="10" font-family="sans-serif" fill="#2980b9">N</text>'
     
-    svg += f'<line x1="80" y1="280" x2="80" y2="190" stroke="#000" stroke-width="1.2"/>'
-    svg += f'<circle cx="80" cy="190" r="2.5" fill="#000"/>'
+    svg += f'<line x1="80" y1="210" x2="{svg_width-20}" y2="210" stroke="#27ae60" stroke-width="1.2" stroke-dasharray="6,3,2,3"/>'
+    svg += f'<text x="105" y="205" font-size="10" font-family="sans-serif" fill="#27ae60">PE</text>'
     
-    svg += f'<line x1="70" y1="280" x2="70" y2="210" stroke="#000" stroke-width="1.2"/>'
-    svg += f'<circle cx="70" cy="210" r="2.5" fill="#000"/>'
+    svg += f'<line x1="60" y1="280" x2="60" y2="30" stroke="#000" stroke-width="1.5"/>'
+    svg += f'<line x1="60" y1="30" x2="100" y2="30" stroke="#000" stroke-width="1.5"/>'
+    svg += f'<line x1="60" y1="40" x2="100" y2="40" stroke="#000" stroke-width="1.5"/>'
+    svg += f'<line x1="60" y1="50" x2="100" y2="50" stroke="#000" stroke-width="1.5"/>'
+    
+    svg += f'<line x1="80" y1="280" x2="80" y2="190" stroke="#2980b9" stroke-width="1.2"/>'
+    svg += f'<circle cx="80" cy="190" r="2.5" fill="#2980b9"/>'
+    
+    svg += f'<line x1="70" y1="280" x2="70" y2="210" stroke="#27ae60" stroke-width="1.2"/>'
+    svg += f'<circle cx="70" cy="210" r="2.5" fill="#27ae60"/>'
     svg += f'<line x1="70" y1="240" x2="80" y2="240" stroke="#000" stroke-width="1.2"/>'
     svg += f'<circle cx="70" cy="240" r="2.5" fill="#000"/>'
     svg += f'<circle cx="80" cy="240" r="2.5" fill="#000"/>'
@@ -360,10 +368,27 @@ if st.session_state['szyna']:
     
     x_offset = 150
     for i, u in enumerate(obwody_svg):
-        svg += f'<circle cx="{x_offset}" cy="50" r="3" fill="#000"/>'
-        svg += f'<line x1="{x_offset}" y1="50" x2="{x_offset}" y2="90" stroke="#000" stroke-width="1.2"/>'
+        svg += f'<line x1="{x_offset}" y1="25" x2="{x_offset}" y2="90" stroke="#000" stroke-width="1.2"/>'
         
-        svg += f'<text x="{x_offset-10}" y="75" font-size="11" font-family="sans-serif">F{i+11}</text>'
+        if u.faza == "L1":
+            svg += f'<circle cx="{x_offset}" cy="30" r="2.5" fill="#000"/>'
+            svg += f'<text x="{x_offset+3}" y="25" font-size="9" font-weight="bold" fill="#c0392b" font-family="sans-serif">L1</text>'
+        elif u.faza == "L2":
+            svg += f'<circle cx="{x_offset}" cy="40" r="2.5" fill="#000"/>'
+            svg += f'<text x="{x_offset+3}" y="35" font-size="9" font-weight="bold" fill="#2c3e50" font-family="sans-serif">L2</text>'
+        elif u.faza == "L3":
+            svg += f'<circle cx="{x_offset}" cy="50" r="2.5" fill="#000"/>'
+            svg += f'<text x="{x_offset+3}" y="45" font-size="9" font-weight="bold" fill="#7f8c8d" font-family="sans-serif">L3</text>'
+        else:
+            svg += f'<circle cx="{x_offset}" cy="30" r="2.5" fill="#000"/>'
+            svg += f'<circle cx="{x_offset}" cy="40" r="2.5" fill="#000"/>'
+            svg += f'<circle cx="{x_offset}" cy="50" r="2.5" fill="#000"/>'
+            svg += f'<line x1="{x_offset-3}" y1="65" x2="{x_offset+4}" y2="60" stroke="#000" stroke-width="1.2"/>'
+            svg += f'<line x1="{x_offset-3}" y1="70" x2="{x_offset+4}" y2="65" stroke="#000" stroke-width="1.2"/>'
+            svg += f'<line x1="{x_offset-3}" y1="75" x2="{x_offset+4}" y2="70" stroke="#000" stroke-width="1.2"/>'
+            svg += f'<text x="{x_offset+4}" y="60" font-size="9" font-weight="bold" fill="#2980b9" font-family="sans-serif">3L</text>'
+        
+        svg += f'<text x="{x_offset-15}" y="75" font-size="11" font-family="sans-serif">F{i+11}</text>'
         
         svg += f'<line x1="{x_offset}" y1="120" x2="{x_offset-12}" y2="90" stroke="#000" stroke-width="1.2"/>'
         svg += f'<line x1="{x_offset-8}" y1="100" x2="{x_offset-4}" y2="104" stroke="#000" stroke-width="1"/>'
