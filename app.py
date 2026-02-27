@@ -1,5 +1,16 @@
 import streamlit as st
 
+# --- KONFIGURACJA STRONY ---
+st.set_page_config(page_title="Wirtualna Rozdzielnica", layout="wide")
+
+# --- STYLE CSS (opcjonalne, dla lepszego wyglądu) ---
+st.markdown("""
+    <style>
+    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
+    .device-card { border: 2px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 10px; background-color: #f8f9fa; }
+    </style>
+    """, unsafe_allow_html=True)
+
 # --- MODELE DANYCH ---
 class Urzadzenie:
     def __init__(self, nazwa, charakterystyka, prad, moduly):
@@ -9,71 +20,66 @@ class Urzadzenie:
         self.moduly = moduly
 
     def __str__(self):
-        return f"[{self.charakterystyka}{self.prad}A] {self.nazwa} - {self.moduly} mod."
+        return f"{self.charakterystyka}{self.prad}A | {self.nazwa}"
 
-# --- KONFIGURACJA STRONY ---
-st.set_page_config(page_title="Asystent Elektryka", layout="wide")
-st.title("⚡ Wirtualna Rozdzielnica")
-st.subheader("Fundamenty systemu montażowego")
+# --- INICJALIZACJA SESJI (Magazyn danych projektu) ---
+if 'projekt_rozdzielnicy' not in st.session_state:
+    st.session_state.projekt_rozdzielnicy = []
 
-# --- INICJALIZACJA SESJI (Baza danych w pamięci przeglądarki) ---
-if 'projekt' not in st.session_state:
-    st.session_state.projekt = []
-
-# --- BIBLIOTEKA URZĄDZEŃ ---
-# Tutaj definiujemy Twoją bazę aparatury
+# --- BIBLIOTEKA URZĄDZEŃ (Fundament) ---
 biblioteka = [
-    Urzadzenie("Wyłącznik nadprądowy 1P", "B", 6, 1),
     Urzadzenie("Wyłącznik nadprądowy 1P", "B", 10, 1),
     Urzadzenie("Wyłącznik nadprądowy 1P", "B", 16, 1),
     Urzadzenie("Wyłącznik nadprądowy 1P", "C", 20, 1),
     Urzadzenie("Wyłącznik nadprądowy 3P", "B", 25, 3),
     Urzadzenie("Wyłącznik nadprądowy 3P", "C", 32, 3),
-    Urzadzenie("Różnicówka 4P (RCCB)", "AC", 40, 4),
-    Urzadzenie("Ochronnik przepięć T1+T2", "Klasa", "B+C", 4),
+    Urzadzenie("Wyłącznik Różnicowoprądowy 4P", "AC", 40, 4),
+    Urzadzenie("Ogranicznik przepięć T1+T2", "Klasa", "B+C", 4),
 ]
 
 # --- INTERFEJS UŻYTKOWNIKA ---
+st.title("⚡ Asystent Instalatora: Projektowanie Rozdzielnicy")
+
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    st.header("📦 Biblioteka")
-    # Wybór urządzenia z listy
-    opcje = [str(u) for u in biblioteka]
-    wybrane_z_listy = st.selectbox("Wybierz aparat do montażu:", opcje)
+    st.header("🛠️ Dobór aparatury")
+    
+    # Wybór urządzenia
+    opcje_tekstowe = [str(u) for u in biblioteka]
+    wybor = st.selectbox("Wybierz urządzenie z biblioteki:", opcje_tekstowe)
     
     # Przycisk dodawania
-    if st.button("Dodaj do rozdzielnicy ➕"):
-        indeks = opcje.index(wybrane_z_listy)
-        obiekt_do_dodania = biblioteka[indeks]
-        st.session_state.projekt.append(obiekt_do_dodania)
-        st.success(f"Dodano: {obiekt_do_dodania.nazwa}")
+    if st.button("Dodaj do szyny DIN"):
+        indeks = opcje_tekstowe.index(wybor)
+        wybrany_obiekt = biblioteka[indeks]
+        st.session_state.projekt_rozdzielnicy.append(wybrany_obiekt)
+        st.toast(f"Dodano {wybrany_obiekt.nazwa}!", icon="✅")
 
-    if st.button("Wyczyść projekt 🗑️"):
-        st.session_state.projekt = []
+    if st.button("Wyczyść wszystko 🗑️"):
+        st.session_state.projekt_rozdzielnicy = []
         st.rerun()
 
 with col2:
-    st.header("🖼️ Widok Rozdzielnicy")
-    if not st.session_state.projekt:
-        st.info("Rozdzielnica jest pusta. Dodaj pierwsze urządzenia z lewego panelu.")
+    st.header("📋 Widok projektu")
+    
+    if not st.session_state.projekt_rozdzielnicy:
+        st.info("Twoja rozdzielnica jest jeszcze pusta. Wybierz aparaty z lewej strony.")
     else:
-        total_moduly = 0
-        for i, u in enumerate(st.session_state.projekt):
-            # Wizualizacja urządzenia jako "kafelek"
+        suma_modulow = 0
+        for i, urz in enumerate(st.session_state.projekt_rozdzielnicy):
             with st.container():
                 st.markdown(f"""
-                <div style="border: 2px solid #4CAF50; border-radius: 5px; padding: 10px; margin: 5px; background-color: #f0f2f6;">
-                    <strong>{i+1}. {u.nazwa}</strong><br>
-                    Charakterystyka: {u.charakterystyka} | Prąd: {u.prad}A | Szerokość: {u.moduly} mod.
+                <div class="device-card">
+                    <strong>{i+1}. {urz.nazwa}</strong><br>
+                    Charakterystyka: <code>{urz.charakterystyka}</code> | Prąd: <code>{urz.prad}A</code> | Szerokość: <code>{urz.moduly} mod.</code>
                 </div>
                 """, unsafe_allow_html=True)
-                total_moduly += u.moduly
+                suma_modulow += urz.moduly
         
-        st.divider()
-        st.metric("Suma zajętych modułów", f"{total_moduly} DIN")
+        st.markdown("---")
+        st.metric("Całkowita zajętość miejsca", f"{suma_modulow} Modułów DIN")
 
-# --- STOPKA ---
-st.sidebar.markdown("---")
-st.sidebar.write("💻 **Status projektu:** Fundamenty (v1.0)")
-st.sidebar.write("👨‍🔧 **Dla kogo:** Instalatorzy elektryczni")
+# Stopka techniczna
+st.sidebar.markdown("### ℹ️ Informacje o systemie")
+st.sidebar.info("Aplikacja pozwala na wirtualny montaż zabezpieczeń na szynie DIN.")
