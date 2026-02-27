@@ -11,6 +11,7 @@ if 'next_faza_idx' not in st.session_state:
 
 st.markdown("""
     <style>
+    /* STYLE EKRANOWE */
     .obudowa { background-color: #333; padding: 25px; border-radius: 12px; }
     .szyna-din {
         display: flex; flex-direction: row; background-color: #b0b0b0;
@@ -44,20 +45,36 @@ st.markdown("""
         line-height: 1.2 !important;
         margin-top: 20px;
     }
+
+    /* --- KLUCZOWA POPRAWKA SYSTEMU WYDRUKU --- */
     @media print {
+        /* Wymuszenie na Streamlit, aby przestał ograniczać wysokość dokumentu */
+        .stApp { display: block !important; }
+        .main, .block-container { 
+            display: block !important; 
+            overflow: visible !important; 
+            height: auto !important; 
+            padding: 0 !important;
+        }
+
         section[data-testid="stSidebar"], .stButton, header, footer, [data-testid="stDecoration"], .no-print {
             display: none !important;
         }
-        .main .block-container { padding-top: 5mm !important; }
+
+        /* Definicja sztywnego podziału stron */
+        .print-page-break {
+            display: block !important;
+            page-break-before: always !important;
+            break-before: page !important;
+            height: 0px !important;
+            border: none !important;
+            margin: 0 !important;
+        }
+
         .obudowa { background-color: white !important; border: 2px solid black !important; }
         .szyna-din { background-color: #f9f9f9 !important; border: 1px solid #000 !important; page-break-inside: avoid; }
         .header-box { border: 2px solid black !important; }
         .header-top { background-color: #f2f2f2 !important; color: black !important; border-bottom: 2px solid black; }
-        
-        .print-page-break {
-            page-break-before: always !important;
-            display: block !important;
-        }
         
         .copyright-footer {
             position: fixed;
@@ -139,6 +156,7 @@ if st.sidebar.button("Usuń ostatni ⬅️"):
 if st.sidebar.button("Resetuj projekt 🗑️"):
     st.session_state['szyna'] = []; st.session_state['next_faza_idx'] = 0; st.rerun()
 
+# --- STRONA 1: NAGŁÓWEK I WIDOK MONTAŻOWY ---
 st.markdown(f"""
     <div class="header-box">
         <div class="header-top">Dokumentacja Techniczna Rozdzielnicy</div>
@@ -187,6 +205,7 @@ for r_i, rzad in enumerate(rzedy):
 st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state['szyna']:
+    # --- STRONA 2: TABELA SPECYFIKACJI I ZESTAWIENIE ---
     st.markdown('<div class="print-page-break"></div>', unsafe_allow_html=True)
     st.header("1. Specyfikacja techniczna obwodów")
     df = pd.DataFrame([{
@@ -201,6 +220,7 @@ if st.session_state['szyna']:
     df_bom.columns = ['Element instalacji', 'Ilość [szt]']
     st.table(df_bom)
 
+    # --- STRONA 3: PEŁNY SCHEMAT IDEOWY ---
     st.markdown('<div class="print-page-break"></div>', unsafe_allow_html=True)
     st.header("3. Schemat jednokreskowy ideowy")
     
