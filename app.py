@@ -46,40 +46,44 @@ st.markdown("""
     }
     
     @media print {
-        /* KLUCZ DO WIELU STRON: Złamanie blokad Streamlita */
-        html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, .block-container {
+        /* OPCJA ATOMOWA: Zdjęcie blokad przewijania ze wszystkich elementów Streamlita */
+        html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, .block-container, div, section, main {
             height: auto !important;
-            min-height: auto !important;
+            max-height: none !important;
             overflow: visible !important;
             display: block !important;
             position: relative !important;
         }
 
+        /* Ukrycie paska bocznego i przycisków */
         section[data-testid="stSidebar"], .stButton, header, footer, [data-testid="stDecoration"], .no-print {
             display: none !important;
         }
         
-        .main .block-container { padding-top: 5mm !important; }
-        .obudowa { background-color: white !important; border: 2px solid black !important; }
+        /* Marginesy do druku */
+        @page { margin: 1cm; }
+        .main .block-container { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
+        
+        .obudowa { background-color: white !important; border: 2px solid black !important; padding: 10px !important; }
         .szyna-din { background-color: #f9f9f9 !important; border: 1px solid #000 !important; page-break-inside: avoid; }
         .header-box { border: 2px solid black !important; }
         .header-top { background-color: #f2f2f2 !important; color: black !important; border-bottom: 2px solid black; }
         
-        /* Nowy, agresywny wymuszacz nowej strony */
+        /* Znacznik podziału stron działający natywnie na czystym HTML */
         .print-page-break {
             page-break-before: always !important;
             break-before: page !important;
             display: block !important;
             height: 0px !important;
+            border: none !important;
             margin: 0 !important;
             padding: 0 !important;
-            border: none !important;
         }
         
         .copyright-footer {
             position: fixed;
-            bottom: 5mm;
-            right: 5mm;
+            bottom: 0;
+            right: 0;
             font-size: 10px;
             color: #333;
             display: block !important;
