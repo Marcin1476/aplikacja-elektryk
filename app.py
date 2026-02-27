@@ -34,7 +34,7 @@ st.markdown("""
         letter-spacing: 2px;
     }
     .schemat-box {
-        font-family: monospace; border: 2px solid #000; padding: 20px; background-color: #fdfdfd; overflow-x: auto;
+        font-family: monospace; border: 2px solid #000; padding: 20px; background-color: #fdfdfd; overflow-x: auto; display: block !important;
     }
     @media print {
         section[data-testid="stSidebar"], .stButton, header, footer, [data-testid="stDecoration"], .no-print {
@@ -53,7 +53,8 @@ st.markdown("""
             color: #333;
             display: block !important;
         }
-        .page-break { page-break-before: always !important; }
+        .page-break { page-break-before: always !important; display: block; }
+        .schemat-box { display: block !important; page-break-inside: avoid; }
     }
     .copyright-screen {
         text-align: right; font-size: 12px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;
@@ -190,18 +191,20 @@ if st.session_state['szyna']:
 
     st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
     st.header("3. Schemat jednokreskowy ideowy")
-    sch = "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\\n┃\\n"
+    
+    sch = "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\n┃\n"
     glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
     obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
     for u in glowny:
         pref = "Q" if u.charakterystyka == "FR" else "F"
-        sch += f"┣━[ {pref}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny\\n┃\\n"
-    sch += "┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3\\n"
+        sch += f"┣━[ {pref}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny\n┃\n"
+    sch += "┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3\n"
     for u in obwody:
         sym = "—[—" if u.moduly == 1 else "—[≡—"
-        sch += f"┃    ┣━({u.faza})━{sym} {u.charakterystyka}{u.prad} ]——— {u.przekroj} ———> {u.opis}\\n"
-    sch += "┃    ▼\\n⚡ REZERWA"
-    st.markdown(f'<div class="schemat-box"><pre style="font-size:14px; line-height:1.2;">{sch}</pre></div>', unsafe_allow_html=True)
+        sch += f"┃    ┣━({u.faza})━{sym} {u.charakterystyka}{u.prad} ]——— {u.przekroj} ———> {u.opis}\n"
+    sch += "┃    ▼\n⚡ REZERWA"
+    
+    st.markdown(f'<div class="schemat-box"><pre style="font-size:14px; line-height:1.2; margin:0;">{sch}</pre></div>', unsafe_allow_html=True)
 
     st.sidebar.divider()
     if st.sidebar.button("🖨️ DRUKUJ CAŁOŚĆ", use_container_width=True):
