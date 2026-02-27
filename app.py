@@ -21,7 +21,7 @@ st.markdown("""
         gap: 4px; margin-bottom: 15px; overflow-x: auto;
     }
     
-    /* NAGŁÓWEK DOKUMENTACJI - ODŚWIEŻONY */
+    /* NAGŁÓWEK DOKUMENTACJI - OCZYSZCZONY */
     .header-box {
         border: 3px solid #1f1f1f;
         padding: 0;
@@ -32,28 +32,11 @@ st.markdown("""
         background-color: #1f1f1f;
         color: white;
         text-align: center;
-        padding: 10px;
-        font-size: 22px;
+        padding: 15px;
+        font-size: 24px;
         font-weight: bold;
         text-transform: uppercase;
         letter-spacing: 2px;
-    }
-    .header-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    .header-table td {
-        border: 1px solid #1f1f1f;
-        padding: 8px 15px;
-        font-size: 14px;
-    }
-    .label-cell {
-        background-color: #f2f2f2;
-        font-weight: bold;
-        width: 15%;
-    }
-    .content-cell {
-        width: 35%;
     }
 
     /* STYLE DRUKU (Ctrl+P) */
@@ -172,24 +155,10 @@ if st.sidebar.button("Usuń ostatni ⬅️"):
 if st.sidebar.button("Resetuj projekt 🗑️"):
     st.session_state['szyna'] = []; st.session_state['next_faza_idx'] = 0; st.rerun()
 
-# --- 5. NAGŁÓWEK DOKUMENTACJI (NOWY CZYTELNY UKŁAD) ---
+# --- 5. NAGŁÓWEK DOKUMENTACJI (UPROSZCZONY ZGODNIE Z PROŚBĄ) ---
 st.markdown(f"""
     <div class="header-box">
         <div class="header-top">Dokumentacja Techniczna Rozdzielnicy</div>
-        <table class="header-table">
-            <tr>
-                <td class="label-cell">INWESTOR:</td>
-                <td class="content-cell">{klient}</td>
-                <td class="label-cell">DATA:</td>
-                <td class="content-cell">{datetime.now().strftime('%d.%m.%Y')}</td>
-            </tr>
-            <tr>
-                <td class="label-cell">LOKALIZACJA:</td>
-                <td class="content-cell">{miejsce}</td>
-                <td class="label-cell">PROJEKTANT:</td>
-                <td class="content-cell">Marcin Szymański</td>
-            </tr>
-        </table>
     </div>
 """, unsafe_allow_html=True)
 
