@@ -3,7 +3,7 @@ import streamlit as st
 # --- KONFIGURACJA STRONY ---
 st.set_page_config(page_title="Asystent Elektryka v1.0", layout="wide")
 
-# --- CUSTOM CSS (Definicja wyglądu szyny i aparatów) ---
+# --- CUSTOM CSS ---
 st.markdown("""
     <style>
     .szyna-din {
@@ -29,7 +29,7 @@ st.markdown("""
         display: flex;
         flex-direction: column;
         min-height: 240px;
-        flex-shrink: 0; /* Zapobiega ściskaniu aparatów */
+        flex-shrink: 0;
     }
     .aparat-naglowek {
         font-weight: bold;
@@ -76,7 +76,7 @@ class Urzadzenie:
 if 'szyna' not in st.session_state:
     st.session_state.szyna = []
 
-# --- PANEL BOCZNY (Sidebar) ---
+# --- PANEL BOCZNY ---
 st.sidebar.header("🛠️ Panel Konfiguracyjny")
 
 biblioteka = [
@@ -89,7 +89,6 @@ biblioteka = [
     Urzadzenie("Ochronnik T1+T2", "SPD", "ABC", 4, "#c0392b"),
 ]
 
-# Tworzenie listy nazw do selectboxa
 opcje_tekstowe = [f"{u.nazwa} {u.charakterystyka}{u.prad}" for u in biblioteka]
 wybor_nazwa = st.sidebar.selectbox("Wybierz aparat:", opcje_tekstowe)
 
@@ -112,7 +111,6 @@ if st.sidebar.button("Wyczyść wszystko 🗑️"):
 # --- WIZUALIZACJA GŁÓWNA ---
 st.title("⚡ Wirtualny Montaż Rozdzielnicy")
 
-# Generowanie bezpiecznego HTML jako jeden blok
 html_items = ""
 for u in st.session_state.szyna:
     szerokosc = u.moduly * 45
@@ -127,24 +125,10 @@ for u in st.session_state.szyna:
 
 st.markdown(f'<div class="szyna-din">{html_items}</div>', unsafe_allow_html=True)
 
-# --- STATYSTYKI I PODSUMOWANIE ---
+# --- STATYSTYKI ---
 st.markdown("---")
 suma_mod = sum(u.moduly for u in st.session_state.szyna)
-cols = st.columns(4)
+cols = st.columns(3)
 cols[0].metric("Zajęte moduły", f"{suma_mod} DIN")
 cols[1].metric("Szerokość szyny", f"{suma_mod * 17.5} mm")
-cols[2].metric("Ilość aparatów", len(st.session_state.szyna))
-
-
-
-### Co musisz teraz zrobić?
-1.  Skopiuj powyższy kod w całości.
-2.  Wklej go do pliku `app.py` na swoim komputerze (nadpisz wszystko).
-3.  Wyślij do GitHub:
-    ```bash
-    git add app.py
-    git commit -m "Naprawa renderowania HTML i poprawa interfejsu"
-    git push origin main
-    ```
-
-**Gdy to zadziała, czy chcesz, abyśmy dodali funkcję nadawania nazw własnych obwodom (np. "Oświetlenie Salon") pod każdym bezpiecznikiem?**
+cols[2].
