@@ -33,6 +33,9 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 2px;
     }
+    .schemat-box {
+        font-family: monospace; border: 2px solid #000; padding: 20px; background-color: #fdfdfd; overflow-x: auto;
+    }
     @media print {
         section[data-testid="stSidebar"], .stButton, header, footer, [data-testid="stDecoration"], .no-print {
             display: none !important;
@@ -50,13 +53,10 @@ st.markdown("""
             color: #333;
             display: block !important;
         }
-        h2, .section-break { page-break-before: always !important; }
+        .page-break { page-break-before: always !important; }
     }
     .copyright-screen {
         text-align: right; font-size: 12px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;
-    }
-    .schemat-box {
-        font-family: monospace; border: 2px solid #000; padding: 20px; background-color: #fdfdfd; overflow-x: auto;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -174,7 +174,7 @@ for r_i, rzad in enumerate(rzedy):
 st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state['szyna']:
-    st.divider()
+    st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
     st.header("1. Specyfikacja techniczna obwodów")
     df = pd.DataFrame([{
         "Nr": i+1, "Aparat": f"{u.charakterystyka}{u.prad}", "Faza": u.faza,
@@ -188,8 +188,12 @@ if st.session_state['szyna']:
     df_bom.columns = ['Element instalacji', 'Ilość [szt]']
     st.table(df_bom)
 
-    st.markdown('<div class="section-break"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
     st.header("3. Schemat jednokreskowy ideowy")
+    
+
+[Image of electrical switchboard single line diagram]
+
     sch = "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\\n┃\\n"
     glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
     obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
