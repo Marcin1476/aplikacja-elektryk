@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from fpdf import FPDF
 
 st.set_page_config(page_title="Projektant Rozdzielnicy - Marcin Szymański", layout="wide")
 
@@ -8,6 +9,56 @@ if 'szyna' not in st.session_state:
     st.session_state['szyna'] = []
 if 'next_faza_idx' not in st.session_state:
     st.session_state['next_faza_idx'] = 0
+
+class PDF(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 12)
+        self.cell(0, 10, 'DOKUMENTACJA TECHNICZNA ROZDZIELNICY', 0, 1, 'C')
+        self.ln(5)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.cell(0, 10, f'Projektant: Marcin Szymański | Strona {self.page_no()}', 0, 0, 'C')
+
+def generuj_pdf_operat(dane_klienta, dane_miejsce, lista_aparatów, schemat_tekst):
+    pdf = PDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=10)
+    
+    pdf.cell(200, 10, txt=f"Inwestor: {dane_klienta}", ln=True)
+    pdf.cell(200, 10, txt=f"Lokalizacja: {dane_miejsce}", ln=True)
+    pdf.cell(200, 10, txt=f"Data: {datetime.now().strftime('%d.%m.%Y')}", ln=True)
+    pdf.ln(10)
+
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(200, 10, txt="1. Specyfikacja techniczna", ln=True)
+    pdf.set_font("Arial", size=9)
+    
+    col_width = 190 / 4
+    pdf.cell(col_width, 7, "Aparat", border=1)
+    pdf.cell(col_width, 7, "Faza", border=1)
+    pdf.cell(col_width, 7, "Przewod", border=1)
+    pdf.cell(col_width, 7, "Opis", border=1)
+    pdf.ln()
+
+    for u in lista_aparatów:
+        pdf.cell(col_width, 6, f"{u.charakterystyka}{u.prad}", border=1)
+        pdf.cell(col_width, 6, str(u.faza), border=1)
+        pdf.cell(col_width, 6, str(u.przekroj), border=1)
+        pdf.cell(col_width, 6, str(u.opis), border=1)
+        pdf.ln()
+
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(200, 10, txt="2. Schemat jednokreskowy ideowy", ln=True)
+    pdf.ln(5)
+    pdf.set_font("Courier", size=9)
+    
+    for line in schemat_tekst.split('\n'):
+        pdf.cell(0, 5, txt=line, ln=True)
+
+    return pdf.output(dest='S').encode('latin-1', errors='replace')
 
 st.markdown("""
     <style>
@@ -37,44 +88,9 @@ st.markdown("""
         font-family: 'Courier New', Courier, monospace;
         border: 2px solid #000;
         padding: 20px;
-        background-color: #ffffff !important;
-        color: #000 !important;
-        white-space: pre !important;
-        display: block !important;
-        line-height: 1.2 !important;
-        margin-top: 20px;
-    }
-
-    @media print {
-        .main, .block-container, .stApp {
-            display: block !important;
-            height: auto !important;
-            overflow: visible !important;
-        }
-        section[data-testid="stSidebar"], .stButton, header, footer, [data-testid="stDecoration"], .no-print {
-            display: none !important;
-        }
-        .print-page-break {
-            display: block !important;
-            page-break-before: always !important;
-            break-before: page !important;
-            height: 0px !important;
-        }
-        .obudowa { background-color: white !important; border: 2px solid black !important; }
-        .szyna-din { background-color: #f9f9f9 !important; border: 1px solid #000 !important; page-break-inside: avoid; }
-        .header-box { border: 2px solid black !important; }
-        .header-top { background-color: #f2f2f2 !important; color: black !important; border-bottom: 2px solid black; }
-        .copyright-footer {
-            position: fixed;
-            bottom: 5mm;
-            right: 5mm;
-            font-size: 10px;
-            color: #333;
-            display: block !important;
-        }
-    }
-    .copyright-screen {
-        text-align: right; font-size: 12px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;
+        background-color: #ffffff;
+        white-space: pre;
+        line-height: 1.2;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -101,12 +117,12 @@ DB_APARATY = {
 def wylicz_przekroj(prad_str):
     try:
         p = float(''.join(filter(lambda x: x.isdigit() or x == '.', str(prad_str))))
-        if p <= 13: return "1.5 mm²"
-        elif p <= 20: return "2.5 mm²"
-        elif p <= 25: return "4.0 mm²"
-        elif p <= 40: return "6.0 mm²"
-        else: return "10.0 mm²+"
-    except: return "wg dok."
+        if p <= 13: return "1.5 mm2"
+        elif p <= 20: return "2.5 mm2"
+        elif p <= 25: return "4.0 mm2"
+        elif p <= 40: return "6.0 mm2"
+        else: return "10.0 mm2"
+    except: return "2.5 mm2"
 
 class Urzadzenie:
     def __init__(self, nazwa, charakterystyka, prad, moduly, faza, opis=""):
@@ -116,54 +132,28 @@ class Urzadzenie:
         try: self.val_a = float(''.join(filter(lambda x: x.isdigit() or x == '.', str(prad))))
         except: self.val_a = 0.0
 
-st.sidebar.title("🛠️ Kreator Projektu")
-prod_name = st.sidebar.selectbox("Producent osprzętu:", list(PRODUCENCI.keys()))
+st.sidebar.title("Kreator Projektu")
+prod_name = st.sidebar.selectbox("Producent:", list(PRODUCENCI.keys()))
 brand_color = PRODUCENCI[prod_name]
-st.sidebar.divider()
-st.sidebar.subheader("📝 Dane Inwestycji")
-klient = st.sidebar.text_input("Inwestor / Klient:", "Jan Kowalski")
-miejsce = st.sidebar.text_input("Miejsce montażu:", "Dom Jednorodzinny - Rozdzielnica R1")
-st.sidebar.divider()
-wsp_j = st.sidebar.slider("Współczynnik jednoczesności:", 0.1, 1.0, 0.6)
-limit_a = st.sidebar.number_input("Limit przedlicznikowy [A]:", value=25)
-st.sidebar.divider()
+klient = st.sidebar.text_input("Inwestor:", "Jan Kowalski")
+miejsce = st.sidebar.text_input("Lokalizacja:", "Rozdzielnica R1")
+wsp_j = st.sidebar.slider("Wspolczynnik:", 0.1, 1.0, 0.6)
+limit_a = st.sidebar.number_input("Limit [A]:", value=25)
 kat = st.sidebar.selectbox("Kategoria:", list(DB_APARATY.keys()))
-ap_typ = st.sidebar.selectbox("Urządzenie:", DB_APARATY[kat], format_func=lambda x: f"{x['n']} ({x['c']})")
-ap_prad = st.sidebar.selectbox("Prąd znamionowy:", ap_typ['p'])
+ap_typ = st.sidebar.selectbox("Urzadzenie:", DB_APARATY[kat], format_func=lambda x: f"{x['n']} ({x['c']})")
+ap_prad = st.sidebar.selectbox("Prad:", ap_typ['p'])
 f_auto = "L123" if ap_typ['m'] >= 3 else st.sidebar.selectbox("Faza:", ["L1", "L2", "L3"], index=st.session_state['next_faza_idx'])
-etyk = st.sidebar.text_input("Przeznaczenie obwodu:", "Gniazda Kuchnia")
+etyk = st.sidebar.text_input("Opis:", "Obwod")
 
-if st.sidebar.button("Dodaj do szafy ➡️", use_container_width=True):
+if st.sidebar.button("Dodaj aparat"):
     st.session_state['szyna'].append(Urzadzenie(ap_typ['n'], ap_typ['c'], ap_prad, ap_typ['m'], f_auto, etyk))
     if ap_typ['m'] < 3: st.session_state['next_faza_idx'] = (st.session_state['next_faza_idx'] + 1) % 3
     st.rerun()
 
-if st.sidebar.button("Usuń ostatni ⬅️"):
-    if st.session_state['szyna']: st.session_state['szyna'].pop(); st.rerun()
+if st.sidebar.button("Wyczysc szafe"):
+    st.session_state['szyna'] = []; st.rerun()
 
-if st.sidebar.button("Resetuj projekt 🗑️"):
-    st.session_state['szyna'] = []; st.session_state['next_faza_idx'] = 0; st.rerun()
-
-st.markdown(f"""
-    <div class="header-box">
-        <div class="header-top">Dokumentacja Techniczna Rozdzielnicy</div>
-    </div>
-""", unsafe_allow_html=True)
-
-obc = {"L1": 0.0, "L2": 0.0, "L3": 0.0}
-for u in st.session_state['szyna']:
-    if u.charakterystyka not in ["FR", "SPD"]:
-        if u.faza == "L123":
-            for f in ["L1", "L2", "L3"]: obc[f] += u.val_a * wsp_j
-        else: obc[u.faza] += u.val_a * wsp_j
-
-cols = st.columns(3)
-for i, f in enumerate(["L1", "L2", "L3"]):
-    p_proc = min(obc[f] / limit_a, 1.1)
-    with cols[i]:
-        st.metric(f"Faza {f}", f"{obc[f]:.1f} A")
-        b_c = "green" if p_proc < 0.8 else "orange" if p_proc < 1.0 else "red"
-        st.markdown(f'<div class="no-print" style="background:#eee;height:8px;width:100%;border-radius:4px;"><div style="background:{b_c};height:8px;width:{p_proc*100}%;border-radius:4px;"></div></div>', unsafe_allow_html=True)
+st.markdown(f'<div class="header-box"><div class="header-top">Dokumentacja Techniczna Rozdzielnicy</div></div>', unsafe_allow_html=True)
 
 rzedy = [[]]; akt_m = 0
 for u in st.session_state['szyna']:
@@ -173,69 +163,28 @@ for u in st.session_state['szyna']:
 st.markdown('<div class="obudowa">', unsafe_allow_html=True)
 for r_i, rzad in enumerate(rzedy):
     if rzad:
-        st.write(f"**SZYNIA DIN NR {r_i+1}**")
-        html_szyny = '<div class="szyna-din">'
+        st.write(f"SZYNIA DIN {r_i+1}")
+        html = '<div class="szyna-din">'
         for u in rzad:
-            f_c = {"L1":"red","L2":"black","L3":"#555","L123":"blue"}.get(u.faza)
-            html_szyny += f"""
-            <div style="width:{u.moduly*45}px; border:1px solid #000; background:#fff; flex-shrink:0; text-align:center; min-height:270px; display:flex; flex-direction:column; border-top:8px solid {brand_color};">
-                <div style="font-size:9px; font-weight:bold; color:{f_c}; padding:3px;">{u.faza}</div>
-                <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
-                    <div style="font-size:19px; font-weight:900; color:#d35400;">{u.charakterystyka}{u.prad}</div>
-                    <div style="font-size:9px; color:#555;">{u.przekroj}</div>
-                </div>
-                <div style="border-top:1px solid #ddd; padding:4px; height:50px; font-size:9px; font-weight:bold; display:flex; align-items:center; justify-content:center; background:#f9f9f9;">{u.opis}</div>
-                <div style="background:#1a252f; color:#f1c40f; font-size:8px; padding:3px;">{u.moduly}M</div>
-            </div>"""
-        html_szyny += '</div>'
-        st.markdown(html_szyny, unsafe_allow_html=True)
+            html += f'<div style="width:{u.moduly*45}px; border:1px solid #000; background:#fff; text-align:center; min-height:200px; border-top:8px solid {brand_color};">' \
+                    f'<div style="font-size:10px;">{u.faza}</div>' \
+                    f'<div style="font-size:18px; font-weight:bold;">{u.charakterystyka}{u.prad}</div>' \
+                    f'<div style="font-size:9px;">{u.opis}</div></div>'
+        html += '</div>'
+        st.markdown(html, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state['szyna']:
-    st.markdown('<div class="print-page-break"></div>', unsafe_allow_html=True)
-    st.header("1. Specyfikacja techniczna obwodów")
-    df = pd.DataFrame([{
-        "Nr": i+1, "Aparat": f"{u.charakterystyka}{u.prad}", "Faza": u.faza,
-        "Przewód": u.przekroj, "Opis": u.opis
-    } for i, u in enumerate(st.session_state['szyna'])])
-    st.table(df)
-
-    st.header("2. Zbiorcze zestawienie materiałów")
-    zestawienie = [f"{u.nazwa} {u.charakterystyka}{u.prad} ({prod_name})" for u in st.session_state['szyna']]
-    df_bom = pd.Series(zestawienie).value_counts().reset_index()
-    df_bom.columns = ['Element instalacji', 'Ilość [szt]']
-    st.table(df_bom)
-
-    st.markdown('<div class="print-page-break"></div>', unsafe_allow_html=True)
-    st.header("3. Schemat jednokreskowy ideowy")
-    
-    sch_lines = ["ZASILANIE: Sieć TN-S 3x230/400V 50Hz", "┃"]
-    glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
-    obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
-    
-    for u in glowny:
-        pref = "Q" if u.charakterystyka == "FR" else "F"
-        sch_lines.append(f"┣━[ {pref}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny")
-        sch_lines.append("┃")
-    
-    sch_lines.append("┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3")
-    for u in obwody:
-        sym = "—[—" if u.moduly == 1 else "—[≡—"
-        sch_lines.append(f"┃    ┣━({u.faza})━{sym} {u.charakterystyka}{u.prad} ]——— {u.przekroj} ———> {u.opis}")
-    sch_lines.append("┃    ▼")
-    sch_lines.append("⚡ REZERWA")
+    st.subheader("Schemat jednokreskowy")
+    sch_lines = ["ZASILANIE: Siec TN-S 3x230/400V", "I"]
+    for u in st.session_state['szyna']:
+        sym = "---[" if u.moduly == 1 else "---[==="
+        sch_lines.append(f"I---({u.faza}){sym} {u.charakterystyka}{u.prad} ]---> {u.opis}")
     
     sch_final = "\n".join(sch_lines)
     st.markdown(f'<div class="schemat-box">{sch_final}</div>', unsafe_allow_html=True)
 
-    st.sidebar.divider()
-    if st.sidebar.button("🖨️ DRUKUJ CAŁOŚĆ", use_container_width=True):
-        st.markdown('<script>window.print();</script>', unsafe_allow_html=True)
-    
-    st.markdown(f"""
-        <div class="copyright-screen no-print">
-            © {datetime.now().year} Opracowanie: <b>Marcin Szymański</b> | Wszystkie prawa zastrzeżone
-        </div>
-    """, unsafe_allow_html=True)
-else:
-    st.info("Dodaj urządzenia, aby wygenerować pełną dokumentację.")
+    pdf_data = generuj_pdf_operat(klient, miejsce, st.session_state['szyna'], sch_final)
+    st.sidebar.download_button(label="POBIERZ PELNA DOKUMENTACJE (PDF)", data=pdf_data, file_name="dokumentacja_rozdzielnicy.pdf", mime="application/pdf", use_container_width=True)
+
+st.markdown(f'<div style="text-align:right; font-size:10px;">© {datetime.now().year} Marcin Szymanski</div>', unsafe_allow_html=True)
