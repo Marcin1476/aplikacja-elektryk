@@ -190,10 +190,6 @@ if st.session_state['szyna']:
 
     st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
     st.header("3. Schemat jednokreskowy ideowy")
-    
-
-[Image of electrical switchboard single line diagram]
-
     sch = "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\\n┃\\n"
     glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
     obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
