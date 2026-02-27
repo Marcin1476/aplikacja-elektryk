@@ -21,28 +21,39 @@ st.markdown("""
         gap: 4px; margin-bottom: 15px; overflow-x: auto;
     }
     
-    /* NAGŁÓWEK DOKUMENTACJI */
+    /* NAGŁÓWEK DOKUMENTACJI - ODŚWIEŻONY */
     .header-box {
-        border: 2px solid #1f1f1f;
-        padding: 15px;
-        margin-bottom: 20px;
-        background-color: #f8f9fa;
-        border-radius: 5px;
+        border: 3px solid #1f1f1f;
+        padding: 0;
+        margin-bottom: 25px;
+        background-color: #ffffff;
     }
-    .header-title {
-        font-size: 26px;
-        font-weight: bold;
+    .header-top {
+        background-color: #1f1f1f;
+        color: white;
         text-align: center;
+        padding: 10px;
+        font-size: 22px;
+        font-weight: bold;
         text-transform: uppercase;
-        margin-bottom: 10px;
-        border-bottom: 2px solid #1f1f1f;
-        padding-bottom: 10px;
+        letter-spacing: 2px;
     }
-    .header-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
+    .header-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .header-table td {
+        border: 1px solid #1f1f1f;
+        padding: 8px 15px;
         font-size: 14px;
+    }
+    .label-cell {
+        background-color: #f2f2f2;
+        font-weight: bold;
+        width: 15%;
+    }
+    .content-cell {
+        width: 35%;
     }
 
     /* STYLE DRUKU (Ctrl+P) */
@@ -63,8 +74,12 @@ st.markdown("""
             page-break-inside: avoid;
         }
         .header-box {
-            background-color: white !important;
             border: 2px solid black !important;
+        }
+        .header-top {
+            background-color: #f2f2f2 !important;
+            color: black !important;
+            border-bottom: 2px solid black;
         }
         .copyright-footer {
             position: fixed;
@@ -157,16 +172,24 @@ if st.sidebar.button("Usuń ostatni ⬅️"):
 if st.sidebar.button("Resetuj projekt 🗑️"):
     st.session_state['szyna'] = []; st.session_state['next_faza_idx'] = 0; st.rerun()
 
-# --- 5. NAGŁÓWEK DOKUMENTACJI (PROFESJONALNY) ---
+# --- 5. NAGŁÓWEK DOKUMENTACJI (NOWY CZYTELNY UKŁAD) ---
 st.markdown(f"""
     <div class="header-box">
-        <div class="header-title">Dokumentacja Techniczna Rozdzielnicy Elektrycznej</div>
-        <div class="header-grid">
-            <div><b>Inwestor:</b> {klient}</div>
-            <div><b>Data opracowania:</b> {datetime.now().strftime('%d.%m.%Y')}</div>
-            <div><b>Lokalizacja:</b> {miejsce}</div>
-            <div><b>Projektant:</b> Marcin Szymański</div>
-        </div>
+        <div class="header-top">Dokumentacja Techniczna Rozdzielnicy</div>
+        <table class="header-table">
+            <tr>
+                <td class="label-cell">INWESTOR:</td>
+                <td class="content-cell">{klient}</td>
+                <td class="label-cell">DATA:</td>
+                <td class="content-cell">{datetime.now().strftime('%d.%m.%Y')}</td>
+            </tr>
+            <tr>
+                <td class="label-cell">LOKALIZACJA:</td>
+                <td class="content-cell">{miejsce}</td>
+                <td class="label-cell">PROJEKTANT:</td>
+                <td class="content-cell">Marcin Szymański</td>
+            </tr>
+        </table>
     </div>
 """, unsafe_allow_html=True)
 
