@@ -259,3 +259,83 @@ if st.session_state['szyna']:
     """, unsafe_allow_html=True)
 else:
     st.info("Dodaj urządzenia, aby wygenerować pełną dokumentację.")
+    # ==========================================
+# --- MODUŁ EKSPORTU DO DRUKU (NIEZAWODNY) ---
+# ==========================================
+import base64
+
+if st.session_state['szyna']:
+    st.sidebar.divider()
+    st.sidebar.subheader("🖨️ Alternatywny system wydruku")
+    st.sidebar.info("Pobierz czysty plik, otwórz go w przeglądarce i wciśnij Ctrl+P. Wydrukuje się idealnie z podziałem na strony.")
+    
+    # Generowanie czystego kodu dla drukarki
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="pl">
+    <head>
+        <meta charset="UTF-8">
+        <title>Dokumentacja - {klient}</title>
+        <style>
+            body {{ font-family: sans-serif; padding: 20px; color: #000; background: #fff; }}
+            h1, h2 {{ text-align: center; }}
+            table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+            th, td {{ border: 1px solid #000; padding: 8px; text-align: left; }}
+            .page-break {{ page-break-before: always; }}
+            .schemat {{ font-family: monospace; white-space: pre; line-height: 1.3; font-size: 14px; border: 1px solid #000; padding: 15px; background-color: #fdfdfd; }}
+            .header {{ text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; font-weight: bold; font-size: 20px; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            DOKUMENTACJA TECHNICZNA ROZDZIELNICY<br>
+            <span style="font-size:14px; font-weight:normal;">Inwestor: {klient} | Lokalizacja: {miejsce} | Data: {datetime.now().strftime('%d.%m.%Y')}</span>
+        </div>
+        
+        <h2>1. Specyfikacja techniczna obwodów</h2>
+        <table>
+            <tr><th>Nr</th><th>Aparat</th><th>Faza</th><th>Przewód</th><th>Opis</th></tr>
+    """
+    
+    # Dodawanie wierszy do tabeli
+    for i, u in enumerate(st.session_state['szyna']):
+        html_content += f"<tr><td>{i+1}</td><td>{u.charakterystyka}{u.prad}</td><td>{u.faza}</td><td>{u.przekroj}</td><td>{u.opis}</td></tr>"
+        
+    html_content += """
+        </table>
+        
+        <div class="page-break"></div>
+        
+        <h2>2. Schemat jednokreskowy ideowy</h2>
+        <div class="schemat">
+    """
+    
+    # Generowanie schematu
+    html_content += "ZASILANIE: Sieć TN-S 3x230/400V 50Hz\n┃\n"
+    glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
+    obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
+    
+    for u in glowny:
+        pref = "Q" if u.charakterystyka == "FR" else "F"
+        html_content += f"┣━[ {pref}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny\n┃\n"
+    
+    html_content += "┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3\n"
+    for u in obwody:
+        sym = "—[—" if u.moduly == 1 else "—[≡—"
+        html_content += f"┃    ┣━({u.faza})━{sym} {u.charakterystyka}{u.prad} ]——— {u.przekroj} ———> {u.opis}\n"
+    html_content += "┃    ▼\n⚡ REZERWA"
+    
+    # Zamknięcie dokumentu
+    html_content += f"""
+        </div>
+        <div style="text-align: right; font-size: 10px; margin-top: 30px;">
+            © {datetime.now().year} Opracowanie: Marcin Szymański | Wszystkie prawa zastrzeżone
+        </div>
+    </body>
+    </html>
+    """
+    
+    # Generowanie linku pobierania
+    b64 = base64.b64encode(html_content.encode('utf-8')).decode()
+    href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" download="Dokumentacja_{klient.replace(" ", "_")}.html" style="display: block; text-align: center; padding: 10px; background-color: #005EB8; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">📥 POBIERZ PLIK DO DRUKU</a>'
+    st.sidebar.markdown(href, unsafe_allow_html=True)
