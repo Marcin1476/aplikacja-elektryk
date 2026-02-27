@@ -46,25 +46,23 @@ st.markdown("""
     }
 
     @media print {
-        /* KLUCZ: Ukrywamy zbędne kontenery Streamlit, które blokują page-break */
+        /* KLUCZOWE: Resetowanie kontenerów Streamlit, aby umożliwić podział stron */
+        .main, .block-container, .stApp {
+            display: block !important;
+            height: auto !important;
+            overflow: visible !important;
+        }
+        
         section[data-testid="stSidebar"], .stButton, header, footer, [data-testid="stDecoration"], .no-print {
             display: none !important;
         }
-        
-        /* Resetujemy kontenery nadrzędne */
-        .main .block-container { 
-            padding-top: 10mm !important; 
-            max-width: 100% !important;
-        }
 
         /* WYMUSZENIE PODZIAŁU STRON */
-        .print-page-break {
+        .page-break {
             display: block !important;
             page-break-before: always !important;
             break-before: page !important;
-            height: 0px;
-            margin: 0;
-            border: none;
+            height: 0px !important;
         }
 
         .obudowa { background-color: white !important; border: 2px solid black !important; }
@@ -200,8 +198,8 @@ for r_i, rzad in enumerate(rzedy):
 st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state['szyna']:
-    # --- STRONA 2: TABELE ---
-    st.markdown('<div class="print-page-break"></div>', unsafe_allow_html=True)
+    # --- STRONA 2: SPECYFIKACJA ---
+    st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
     st.header("1. Specyfikacja techniczna obwodów")
     df = pd.DataFrame([{
         "Nr": i+1, "Aparat": f"{u.charakterystyka}{u.prad}", "Faza": u.faza,
@@ -216,16 +214,23 @@ if st.session_state['szyna']:
     st.table(df_bom)
 
     # --- STRONA 3: SCHEMAT ---
-    st.markdown('<div class="print-page-break"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="page-break"></div>', unsafe_allow_html=True)
     st.header("3. Schemat jednokreskowy ideowy")
+    
+    
+
+[Image of electrical switchboard single line diagram]
+
     
     sch_lines = ["ZASILANIE: Sieć TN-S 3x230/400V 50Hz", "┃"]
     glowny = [u for u in st.session_state['szyna'] if u.charakterystyka in ["FR", "SPD"]]
     obwody = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
+    
     for u in glowny:
         pref = "Q" if u.charakterystyka == "FR" else "F"
         sch_lines.append(f"┣━[ {pref}: {u.charakterystyka} {u.prad} ] ——— Rozdzielacz główny")
         sch_lines.append("┃")
+    
     sch_lines.append("┣━━━━┳━━━━┳━━━━ SZYNIA L1, L2, L3")
     for u in obwody:
         sym = "—[—" if u.moduly == 1 else "—[≡—"
@@ -243,9 +248,6 @@ if st.session_state['szyna']:
     st.markdown(f"""
         <div class="copyright-screen no-print">
             © {datetime.now().year} Opracowanie: <b>Marcin Szymański</b> | Wszystkie prawa zastrzeżone
-        </div>
-        <div class="copyright-footer" style="display:none;">
-            Projekt: Marcin Szymański | Data: {datetime.now().strftime('%d.%m.%Y')}
         </div>
     """, unsafe_allow_html=True)
 else:
