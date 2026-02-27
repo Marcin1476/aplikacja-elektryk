@@ -320,7 +320,7 @@ if st.session_state['szyna']:
     """
     
     obwody_svg = [u for u in st.session_state['szyna'] if u.charakterystyka not in ["FR", "SPD"]]
-    svg_width = max(1150, 150 + len(obwody_svg) * 60)
+    svg_width = max(1150, 150 + len(obwody_svg) * 80)
     svg_height = 420
     
     svg = f'<div style="text-align: left; margin-top: 20px; border: 2px solid #000; background-color: #fafafa; padding-bottom: 20px; overflow-x: auto;">'
@@ -372,7 +372,7 @@ if st.session_state['szyna']:
         svg += f'<path d="M {x_offset} 120 A 5 5 0 0 0 {x_offset} 130" fill="none" stroke="#000" stroke-width="1.2"/>'
         svg += f'<path d="M {x_offset} 130 L {x_offset+6} 130 L {x_offset+6} 140 L {x_offset} 140" fill="none" stroke="#000" stroke-width="1.2"/>'
         
-        svg += f'<text x="{x_offset-25}" y="135" font-size="11" font-family="sans-serif">{u.charakterystyka}{u.prad}</text>'
+        svg += f'<text x="{x_offset}" y="135" font-size="11" font-family="sans-serif" text-anchor="middle">{u.charakterystyka}{u.prad}</text>'
         
         svg += f'<line x1="{x_offset}" y1="140" x2="{x_offset}" y2="240" stroke="#000" stroke-width="1.2"/>'
         
@@ -387,7 +387,7 @@ if st.session_state['szyna']:
         svg += f'<text x="{x_offset-5}" y="250" font-size="11" font-family="sans-serif" transform="rotate(90 {x_offset-5} 250)">{u.opis}</text>'
         svg += f'<text x="{x_offset+10}" y="250" font-size="11" font-family="sans-serif" transform="rotate(90 {x_offset+10} 250)">{cab}</text>'
         
-        x_offset += 60
+        x_offset += 80
         
     svg += '</svg></div>'
     html_content += svg
